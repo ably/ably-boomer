@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/ably/ably-go/ably"
-	"github.com/ably/ably-go/ably/proto"
 	"github.com/myzhan/boomer"
 	"os"
-	"time"
 )
 
 func getEnv(name string) string {
@@ -31,13 +29,14 @@ func ablyChannelName() string {
 	return getEnv("ABLY_CHANNEL_NAME")
 }
 
-func waitForMessage(env string, apiKey string, channelName string) (error, *proto.Message) {
+func subscribeTask(env string, apiKey string, channelName string) {
 	options := ably.NewClientOptions(apiKey)
 	options.Environment = env
 
 	client, err := ably.NewRealtimeClient(options)
 	if err != nil {
-		return err, nil
+		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		return
 	}
 	defer client.Close()
 
@@ -45,30 +44,15 @@ func waitForMessage(env string, apiKey string, channelName string) (error, *prot
 
 	sub, err := channel.Subscribe()
 	if err != nil {
-		return err, nil
+		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		return
 	}
 
-	fmt.Println("Waiting for message...")
+	fmt.Println("Waiting for messages...")
 
-	msg := <-sub.MessageChannel()
-
-	fmt.Println("Message received!")
-
-	return nil, msg
-}
-
-func subscribeTask(env string, apiKey string, channelName string) {
-	start := time.Now()
-
-	err, msg := waitForMessage(env, apiKey, channelName)
-	_ = msg
-
-	elapsed := time.Since(start)
-
-	if err == nil {
-		boomer.RecordSuccess("ably", "subscribe", elapsed.Nanoseconds()/int64(time.Millisecond), int64(10))
-	} else {
-		boomer.RecordFailure("ably", "subscribe", elapsed.Nanoseconds()/int64(time.Millisecond), err.Error())
+	for msg := range sub.MessageChannel() {
+		_ = msg
+		boomer.RecordSuccess("ably", "subscribe", 1, int64(10))
 	}
 }
 
