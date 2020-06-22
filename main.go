@@ -5,6 +5,7 @@ import (
 	"github.com/ably/ably-go/ably"
 	"github.com/myzhan/boomer"
 	"os"
+	"context"
 )
 
 func getEnv(name string) string {
@@ -47,12 +48,22 @@ func subscribeTask(env string, apiKey string, channelName string) {
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
+	defer sub.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	fmt.Println("Waiting for messages...")
 
-	for msg := range sub.MessageChannel() {
-		_ = msg
-		boomer.RecordSuccess("ably", "subscribe", 1, int64(10))
+	for {
+		select {
+		case msg := <-sub.MessageChannel():
+			_ = msg
+			boomer.RecordSuccess("ably", "subscribe", 1, int64(10))
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
