@@ -1,5 +1,7 @@
+DOCKER_IMAGE_TAG=latest
+
 image:
-	docker build .
+	DOCKER_BUILDKIT=1 docker build -t ably/ably-boomer:$(DOCKER_IMAGE_TAG) .
 
 build:
 	go vet
