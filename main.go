@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"github.com/ably/ably-go/ably"
-	"github.com/myzhan/boomer"	
+	"github.com/ably-forks/boomer"
 	"os"
 	"context"
 )
