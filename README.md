@@ -22,7 +22,7 @@ To run the Docker container against a Locust 0.9.0 master:
 $ docker run -e "ABLY_ENV=<env>" \
              -e "ABLY_API_KEY=<api key>" \
              -e "ABLY_CHANNEL_NAME=<channel name>" \
-             --rm ably/ably-boomer \
+             --rm ably-boomer \
              --master-version-0.9.0 \
              --master-host=<host address>
 ```
