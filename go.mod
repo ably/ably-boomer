@@ -4,8 +4,8 @@ go 1.14
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/ably-forks/boomer v0.0.0-20200629151720-518e91ffb63a
-	github.com/ably/ably-go v1.1.5
+	github.com/ably-forks/boomer v0.0.0-20200630132235-be971856d237
+	github.com/ably/ably-go v1.1.6-0.20200630151624-f0d9ad8ac30b
 	github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/google/uuid v1.1.1 // indirect
