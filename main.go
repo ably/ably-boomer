@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"github.com/ably/ably-go/ably"
-	"github.com/myzhan/boomer"
+	"github.com/ably-forks/boomer"
 	"os"
 	"context"
 )
@@ -12,7 +13,7 @@ func getEnv(name string) string {
 	value, exists := os.LookupEnv(name)
 
 	if !exists {
-		panic("Environment Variable '" + name + "' not set!")
+		log.Fatalln("Environment Variable '" + name + "' not set!")
 	}
 
 	return value
@@ -54,13 +55,11 @@ func subscribeTask(env string, apiKey string, channelName string) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
-	fmt.Println("Waiting for messages...")
-
 	for {
 		select {
 		case msg := <-sub.MessageChannel():
-			_ = msg
-			boomer.RecordSuccess("ably", "subscribe", 1, int64(10))
+			bytes := len(fmt.Sprint(msg.Data))
+			boomer.RecordSuccess("ably", "subscribe", 1, int64(bytes))
 		case <-ctx.Done():
 			return
 		}
@@ -72,8 +71,8 @@ func currySubscribeTask() func() {
 	apiKey := ablyApiKey()
 	channelName := ablyChannelName()
 
-	fmt.Println("Ably Env:", env)
-	fmt.Println("Channel Name:", channelName)
+	log.Println("Ably Env:", env)
+	log.Println("Channel Name:", channelName)
 
 	return func() {
 		subscribeTask(env, apiKey, channelName)
