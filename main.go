@@ -39,7 +39,7 @@ func millisecondTimestamp() int64 {
 	return millis
 }
 
-func subscribeTask(env string, apiKey string, channelName string) {
+func fanOutTask(env string, apiKey string, channelName string) {
 	options := ably.NewClientOptions(apiKey)
 	options.Environment = env
 
@@ -76,7 +76,7 @@ func subscribeTask(env string, apiKey string, channelName string) {
 	}
 }
 
-func currySubscribeTask() func() {
+func curryFanOutTask() func() {
 	env := ablyEnv()
 	apiKey := ablyApiKey()
 	channelName := ablyChannelName()
@@ -85,14 +85,14 @@ func currySubscribeTask() func() {
 	log.Println("Channel Name:", channelName)
 
 	return func() {
-		subscribeTask(env, apiKey, channelName)
+		fanOutTask(env, apiKey, channelName)
 	}
 }
 
 func main() {
 	task := &boomer.Task{
 		Name: "subscribe",
-		Fn:   currySubscribeTask(),
+		Fn:   curryFanOutTask(),
 	}
 
 	boomer.Run(task)
