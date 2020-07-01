@@ -35,4 +35,4 @@ Variable | Description | Default | Required
 --- | --- | --- | ---
 `ABLY_ENV` | The name of the Ably environment to run the load test against. | n/a | yes
 `ABLY_API_KEY` | The API key to use. | n/a | yes
-`ABLY_CHANNEL_NAME` | The name of the channel to use. | n/a | yes
+`ABLY_CHANNEL_NAME` | The name of the channel to use. | `test_channel` | no

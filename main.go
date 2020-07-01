@@ -4,34 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
 )
-
-func getEnv(name string) string {
-	value, exists := os.LookupEnv(name)
-
-	if !exists {
-		log.Fatalln("Environment Variable '" + name + "' not set!")
-	}
-
-	return value
-}
-
-func ablyEnv() string {
-	return getEnv("ABLY_ENV")
-}
-
-func ablyApiKey() string {
-	return getEnv("ABLY_API_KEY")
-}
-
-func ablyChannelName() string {
-	return getEnv("ABLY_CHANNEL_NAME")
-}
 
 func millisecondTimestamp() int64 {
 	nanos := time.Now().UnixNano()
