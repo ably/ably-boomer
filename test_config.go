@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 )
 
 const DefaultChannelName = "test_channel"
@@ -25,6 +26,10 @@ func getEnvWithDefault(name string, defaultValue string) string {
 	}
 
 	return defaultValue
+}
+
+func ablyTestType() string {
+	return strings.ToLower(getEnv("ABLY_TEST_TYPE"))
 }
 
 func ablyEnv() string {
