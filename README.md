@@ -27,6 +27,18 @@ $ docker run -e "ABLY_ENV=<env>" \
              --master-host=<host address>
 ```
 
+### Test Types
+
+Different test types will simulate different usage patterns.
+
+#### Fanout
+
+A Fanout type test will simulate a single channel with a large number of subscribers.
+
+#### Personal
+
+A Personal type test will simulate a large number of channels, each with a small amount of subscribers.
+
 ### Test Configuration
 
 The test is configured through environment variables.
