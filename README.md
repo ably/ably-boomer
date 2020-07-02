@@ -39,3 +39,4 @@ Variable | Description | Default | Required
 `ABLY_CHANNEL_NAME` | The name of the channel to use. Only used for `fanout` type tests. | `test_channel` | no
 `ABLY_PUBLISH_INTERVAL` | The number of seconds to wait between publishing messages. Only used for `personal` type tests. | `10` | no
 `ABLY_NUM_SUBSCRIPTIONS` | The number of subscriptions to create per channel. Only used for `personal` type tests. | `2` | no
+`ABLY_MSG_DATA_LENGTH` | The number of characters to publish as message data. Only used for `personal` type tests. | `2000` | no

@@ -14,7 +14,7 @@ import (
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-const channelNameLength = 50
+const channelNameLength = 100
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -69,8 +69,9 @@ func personalTask(testConfig TestConfig) {
 	for {
 		select {
 		case <-ticker.C:
-			data := randomString(50)
-			res, err := channel.Publish("test", data)
+			data := randomString(testConfig.MessageDataLength)
+
+			res, err := channel.Publish("test-event", data)
 			_ = res
 
 			if err != nil {
@@ -94,6 +95,7 @@ func curryPersonalTask(testConfig TestConfig) func() {
 	log.Println("Ably Env:", testConfig.Env)
 	log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
 	log.Println("Subscriptions Per Channel:", testConfig.NumSubscriptions)
+	log.Println("Message Data Length:", testConfig.MessageDataLength, "characters")
 
 	return func() {
 		personalTask(testConfig)
