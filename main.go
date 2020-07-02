@@ -10,6 +10,8 @@ func taskFn() func() {
 	switch testType {
 	case "fanout":
 		return curryFanOutTask()
+	case "personal":
+		return curryPersonalTask()
 	default:
 		panic("Unknown test type: '" + testType + "'")
 	}

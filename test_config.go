@@ -4,9 +4,12 @@ import (
 	"log"
 	"os"
 	"strings"
+	"strconv"
 )
 
 const DefaultChannelName = "test_channel"
+const DefaultPublishInterval = "10"
+const DefaultNumSubscriptions = "2"
 
 func getEnv(name string) string {
 	value, exists := os.LookupEnv(name)
@@ -42,4 +45,28 @@ func ablyApiKey() string {
 
 func ablyChannelName() string {
 	return getEnvWithDefault("ABLY_CHANNEL_NAME", DefaultChannelName)
+}
+
+func ablyPublishInterval() int {
+	value := getEnvWithDefault("ABLY_PUBLISH_INTERVAL", DefaultPublishInterval)
+
+	n, err := strconv.Atoi(value)
+
+	if err != nil {
+		panic("Expected an Integer for 'ABLY_PUBLISH_INTERVAL' - got '" + value + "'")
+	}
+
+	return n
+}
+
+func ablyNumSubscriptions() int {
+	value := getEnvWithDefault("ABLY_NUM_SUBSCRIPTIONS", DefaultNumSubscriptions)
+
+	n, err := strconv.Atoi(value)
+
+	if err != nil {
+		panic("Expected an Integer for 'ABLY_NUM_SUBSCRIPTIONS' - got '" + value + "'")
+	}
+
+	return n
 }

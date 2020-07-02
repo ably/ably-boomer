@@ -52,6 +52,7 @@ func curryFanOutTask() func() {
 	apiKey := ablyApiKey()
 	channelName := ablyChannelName()
 
+	log.Println("Test Type: FanOut")
 	log.Println("Ably Env:", env)
 	log.Println("Channel Name:", channelName)
 
