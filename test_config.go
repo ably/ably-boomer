@@ -3,13 +3,33 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 const DefaultChannelName = "test_channel"
 const DefaultPublishInterval = "10"
 const DefaultNumSubscriptions = "2"
+
+type TestConfig struct {
+	TestType         string
+	Env              string
+	ApiKey           string
+	ChannelName      string
+	PublishInterval  int
+	NumSubscriptions int
+}
+
+func newTestConfig() TestConfig {
+	return TestConfig{
+		TestType:         ablyTestType(),
+		Env:              ablyEnv(),
+		ApiKey:           ablyApiKey(),
+		ChannelName:      ablyChannelName(),
+		PublishInterval:  ablyPublishInterval(),
+		NumSubscriptions: ablyNumSubscriptions(),
+	}
+}
 
 func getEnv(name string) string {
 	value, exists := os.LookupEnv(name)

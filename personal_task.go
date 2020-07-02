@@ -13,6 +13,7 @@ import (
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
 const channelNameLength = 50
 
 func init() {
@@ -27,9 +28,9 @@ func randomString(length int) string {
 	return string(b)
 }
 
-func personalTask(env string, apiKey string, publishInterval int, numSubscriptions int) {
-	options := ably.NewClientOptions(apiKey)
-	options.Environment = env
+func personalTask(testConfig TestConfig) {
+	options := ably.NewClientOptions(testConfig.ApiKey)
+	options.Environment = testConfig.Env
 
 	client, err := ably.NewRealtimeClient(options)
 	if err != nil {
@@ -40,35 +41,35 @@ func personalTask(env string, apiKey string, publishInterval int, numSubscriptio
 
 	channel := client.Channels.Get(randomString(channelNameLength))
 
-  aggregateMessageChannel := make(chan *proto.Message)
+	// Make a channel that all of the subscriptions messages go to
+	aggregateMessageChannel := make(chan *proto.Message)
 
-  for i := 0; i < numSubscriptions; i++ {
-    sub, err := channel.Subscribe()
-    if err != nil {
-      boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-      return
-    }
+	for i := 0; i < testConfig.NumSubscriptions; i++ {
+		sub, err := channel.Subscribe()
+		if err != nil {
+			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+			return
+		}
+		defer sub.Close()
 
-    go func() {
-      for msg := range sub.MessageChannel() {
-        aggregateMessageChannel <- msg
-      }
-    }()
-
-    defer sub.Close()
-  }
+		go func() {
+			for msg := range sub.MessageChannel() {
+				aggregateMessageChannel <- msg
+			}
+		}()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
-	ticker := time.NewTicker(time.Duration(publishInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-      data := randomString(50)
+			data := randomString(50)
 			res, err := channel.Publish("test", data)
 			_ = res
 
@@ -88,18 +89,13 @@ func personalTask(env string, apiKey string, publishInterval int, numSubscriptio
 	}
 }
 
-func curryPersonalTask() func() {
-	env := ablyEnv()
-	apiKey := ablyApiKey()
-  publishInterval := ablyPublishInterval()
-  numSubscriptions := ablyNumSubscriptions()
-
-  log.Println("Test Type: Personal")
-	log.Println("Ably Env:", env)
-	log.Println("Publish Interval:", publishInterval, "seconds")
-	log.Println("Subscriptions Per Channel:", numSubscriptions)
+func curryPersonalTask(testConfig TestConfig) func() {
+	log.Println("Test Type: Personal")
+	log.Println("Ably Env:", testConfig.Env)
+	log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
+	log.Println("Subscriptions Per Channel:", testConfig.NumSubscriptions)
 
 	return func() {
-		personalTask(env, apiKey, publishInterval, numSubscriptions)
+		personalTask(testConfig)
 	}
 }

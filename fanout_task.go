@@ -10,9 +10,9 @@ import (
 	"github.com/ably/ably-go/ably"
 )
 
-func fanOutTask(env string, apiKey string, channelName string) {
-	options := ably.NewClientOptions(apiKey)
-	options.Environment = env
+func fanOutTask(testConfig TestConfig) {
+	options := ably.NewClientOptions(testConfig.ApiKey)
+	options.Environment = testConfig.Env
 
 	client, err := ably.NewRealtimeClient(options)
 	if err != nil {
@@ -21,7 +21,7 @@ func fanOutTask(env string, apiKey string, channelName string) {
 	}
 	defer client.Close()
 
-	channel := client.Channels.Get(channelName)
+	channel := client.Channels.Get(testConfig.ChannelName)
 
 	sub, err := channel.Subscribe()
 	if err != nil {
@@ -47,17 +47,13 @@ func fanOutTask(env string, apiKey string, channelName string) {
 	}
 }
 
-func curryFanOutTask() func() {
-	env := ablyEnv()
-	apiKey := ablyApiKey()
-	channelName := ablyChannelName()
-
+func curryFanOutTask(testConfig TestConfig) func() {
 	log.Println("Test Type: FanOut")
-	log.Println("Ably Env:", env)
-	log.Println("Channel Name:", channelName)
+	log.Println("Ably Env:", testConfig.Env)
+	log.Println("Channel Name:", testConfig.ChannelName)
 
 	return func() {
-		fanOutTask(env, apiKey, channelName)
+		fanOutTask(testConfig)
 	}
 }
 
