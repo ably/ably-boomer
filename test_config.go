@@ -13,23 +13,23 @@ const DefaultNumSubscriptions = "2"
 const DefaultMessageDataLength = "2000"
 
 type TestConfig struct {
-	TestType         string
-	Env              string
-	ApiKey           string
-	ChannelName      string
-	PublishInterval  int
-	NumSubscriptions int
+	TestType          string
+	Env               string
+	ApiKey            string
+	ChannelName       string
+	PublishInterval   int
+	NumSubscriptions  int
 	MessageDataLength int
 }
 
 func newTestConfig() TestConfig {
 	return TestConfig{
-		TestType:         ablyTestType(),
-		Env:              ablyEnv(),
-		ApiKey:           ablyApiKey(),
-		ChannelName:      ablyChannelName(),
-		PublishInterval:  ablyPublishInterval(),
-		NumSubscriptions: ablyNumSubscriptions(),
+		TestType:          ablyTestType(),
+		Env:               ablyEnv(),
+		ApiKey:            ablyApiKey(),
+		ChannelName:       ablyChannelName(),
+		PublishInterval:   ablyPublishInterval(),
+		NumSubscriptions:  ablyNumSubscriptions(),
 		MessageDataLength: ablyMessageDataLength(),
 	}
 }

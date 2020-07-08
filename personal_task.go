@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
-	"github.com/ably/ably-go/ably"
 	"github.com/ably/ably-go/ably/proto"
 )
 
@@ -28,23 +27,25 @@ func randomString(length int) string {
 	return string(b)
 }
 
+func randomDelay() {
+	r := rand.Intn(60)
+	time.Sleep(time.Duration(r) * time.Second)
+}
+
 func personalTask(testConfig TestConfig) {
-	options := ably.NewClientOptions(testConfig.ApiKey)
-	options.Environment = testConfig.Env
+	randomDelay()
 
-	client, err := ably.NewRealtimeClient(options)
-	if err != nil {
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-		return
-	}
-	defer client.Close()
-
-	channel := client.Channels.Get(randomString(channelNameLength))
+	channelName := randomString(channelNameLength)
 
 	// Make a channel that all of the subscriptions messages go to
 	aggregateMessageChannel := make(chan *proto.Message)
 
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
+		subClient := newAblyClient(testConfig)
+		defer subClient.Close()
+
+		channel := subClient.Channels.Get(channelName)
+
 		sub, err := channel.Subscribe()
 		if err != nil {
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -66,6 +67,11 @@ func personalTask(testConfig TestConfig) {
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
+	publishClient := newAblyClient(testConfig)
+	defer publishClient.Close()
+
+	channel := publishClient.Channels.Get(channelName)
+
 	for {
 		select {
 		case <-ticker.C:
@@ -76,6 +82,7 @@ func personalTask(testConfig TestConfig) {
 
 			if err != nil {
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
+				return
 			} else {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
