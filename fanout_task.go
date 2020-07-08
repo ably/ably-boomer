@@ -7,18 +7,10 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
-	"github.com/ably/ably-go/ably"
 )
 
 func fanOutTask(testConfig TestConfig) {
-	options := ably.NewClientOptions(testConfig.ApiKey)
-	options.Environment = testConfig.Env
-
-	client, err := ably.NewRealtimeClient(options)
-	if err != nil {
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-		return
-	}
+	client := newAblyClient(testConfig)
 	defer client.Close()
 
 	channel := client.Channels.Get(testConfig.ChannelName)
