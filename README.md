@@ -2,9 +2,8 @@
 
 Ably load generator for Locust.
 
-Ably-boomer will listen and report to the Locust master.
+Ably-boomer will listen and report to a Locust master.
 
-Any host address specified in the Locust web UI will be ignored.
 
 ## Build
 
@@ -22,6 +21,7 @@ To run the Docker container against a Locust 0.9.0 master:
 $ docker run -e "ABLY_ENV=<env>" \
              -e "ABLY_API_KEY=<api key>" \
              -e "ABLY_TEST_TYPE=<fanout | personal>" \
+             --ulimit nofile=250000:250000 \
              --rm ably-boomer \
              --master-version-0.9.0 \
              --master-host=<host address>
@@ -35,9 +35,17 @@ Different test types will simulate different usage patterns.
 
 A Fanout type test will simulate a single channel with a large number of subscribers.
 
+Each Locust user will create a single subscription.
+
+No messages will be published to the channel - this will need to be done separately.
+
 #### Personal
 
 A Personal type test will simulate a large number of channels, each with a small amount of subscribers.
+
+Each Locust user will create a new channel with some subscribers.
+
+Messages will be published to the channel at a regular interval.
 
 ### Test Configuration
 
