@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -38,7 +37,7 @@ func getEnv(name string) string {
 	value, exists := os.LookupEnv(name)
 
 	if !exists {
-		log.Fatalln("Environment Variable '" + name + "' not set!")
+		panic("Environment Variable '" + name + "' not set!")
 	}
 
 	return value

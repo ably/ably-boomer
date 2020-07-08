@@ -10,4 +10,7 @@ build:
 test:
 	go test ./ably
 
-.PHONY: image build
+fmt:
+	go fmt ./ably
+
+.PHONY: image build test fmt
