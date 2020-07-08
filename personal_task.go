@@ -35,34 +35,38 @@ func randomDelay() {
 func personalTask(testConfig TestConfig) {
 	randomDelay()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	boomer.Events.Subscribe("boomer:stop", cancel)
+
 	channelName := randomString(channelNameLength)
 
 	// Make a channel that all of the subscriptions messages go to
 	aggregateMessageChannel := make(chan *proto.Message)
 
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
-		subClient := newAblyClient(testConfig)
-		defer subClient.Close()
-
-		channel := subClient.Channels.Get(channelName)
-
-		sub, err := channel.Subscribe()
-		if err != nil {
-			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		select {
+		case <-ctx.Done():
 			return
-		}
-		defer sub.Close()
+		default:
+			subClient := newAblyClient(testConfig)
+			defer subClient.Close()
 
-		go func() {
-			for msg := range sub.MessageChannel() {
-				aggregateMessageChannel <- msg
+			channel := subClient.Channels.Get(channelName)
+
+			sub, err := channel.Subscribe()
+			if err != nil {
+				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				return
 			}
-		}()
+			defer sub.Close()
+
+			go func() {
+				for msg := range sub.MessageChannel() {
+					aggregateMessageChannel <- msg
+				}
+			}()
+		}
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
