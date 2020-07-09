@@ -59,7 +59,11 @@ func personalTask(testConfig TestConfig) {
 		case <-ctx.Done():
 			return
 		default:
-			subClient := newAblyClient(testConfig)
+			subClient, err := newAblyClient(testConfig)
+			if err != nil {
+				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				return
+			}
 			defer subClient.Close()
 
 			channel := subClient.Channels.Get(channelName)
@@ -78,7 +82,11 @@ func personalTask(testConfig TestConfig) {
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
-	publishClient := newAblyClient(testConfig)
+	publishClient, err := newAblyClient(testConfig)
+	if err != nil {
+		boomer.RecordFailure("ably", "publish", 0, err.Error())
+		return
+	}
 	defer publishClient.Close()
 
 	channel := publishClient.Channels.Get(channelName)

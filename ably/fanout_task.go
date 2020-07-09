@@ -10,7 +10,13 @@ import (
 )
 
 func fanOutTask(testConfig TestConfig) {
-	client := newAblyClient(testConfig)
+	client, err := newAblyClient(testConfig)
+
+	if err != nil {
+		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		return
+	}
+
 	defer client.Close()
 
 	channel := client.Channels.Get(testConfig.ChannelName)
