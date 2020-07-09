@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
-	"github.com/ably/ably-go/ably/proto"
+	"github.com/ably/ably-go/ably"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -32,6 +32,20 @@ func randomDelay() {
 	time.Sleep(time.Duration(r) * time.Second)
 }
 
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-sub.MessageChannel():
+			timeElapsed := millisecondTimestamp() - msg.Timestamp
+			bytes := len(fmt.Sprint(msg.Data))
+
+			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
+		}
+	}
+}
+
 func personalTask(testConfig TestConfig) {
 	randomDelay()
 
@@ -39,9 +53,6 @@ func personalTask(testConfig TestConfig) {
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	channelName := randomString(channelNameLength)
-
-	// Make a channel that all of the subscriptions messages go to
-	aggregateMessageChannel := make(chan *proto.Message)
 
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
 		select {
@@ -60,11 +71,7 @@ func personalTask(testConfig TestConfig) {
 			}
 			defer sub.Close()
 
-			go func() {
-				for msg := range sub.MessageChannel() {
-					aggregateMessageChannel <- msg
-				}
-			}()
+			go reportSubscriptionToLocust(ctx, sub)
 		}
 	}
 
@@ -81,20 +88,13 @@ func personalTask(testConfig TestConfig) {
 		case <-ticker.C:
 			data := randomString(testConfig.MessageDataLength)
 
-			res, err := channel.Publish("test-event", data)
-			_ = res
+			_, err := channel.Publish("test-event", data)
 
 			if err != nil {
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
-				return
 			} else {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
-		case msg := <-aggregateMessageChannel:
-			timeElapsed := millisecondTimestamp() - msg.Timestamp
-			bytes := len(fmt.Sprint(msg.Data))
-
-			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
 		case <-ctx.Done():
 			return
 		}
