@@ -2,8 +2,12 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/ably-forks/boomer v0.0.0-20200629151720-518e91ffb63a h1:9KGHtiEA8N0gTq27lN6ONU3MUokUQQLQ7D7lyIyvSWs=
 github.com/ably-forks/boomer v0.0.0-20200629151720-518e91ffb63a/go.mod h1:rIv4l5cmx6Zu4Ht2cfBvjR42+BieSv/DxOC26whTHXY=
+github.com/ably-forks/boomer v0.0.0-20200630132235-be971856d237 h1:8T08mYyFwAjZUOrvzYH18h4rbx948zIC2+11J+8JZLY=
+github.com/ably-forks/boomer v0.0.0-20200630132235-be971856d237/go.mod h1:rIv4l5cmx6Zu4Ht2cfBvjR42+BieSv/DxOC26whTHXY=
 github.com/ably/ably-go v1.1.5 h1:ng7gRbPS1tmL865vQsdQs1G9u6phz0dTW6E7P7QZwTM=
 github.com/ably/ably-go v1.1.5/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
+github.com/ably/ably-go v1.1.6-0.20200630151624-f0d9ad8ac30b h1:AINstcuxQzJuD3wbepsstVvxa73OiAuIHUA9ilP+COw=
+github.com/ably/ably-go v1.1.6-0.20200630151624-f0d9ad8ac30b/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 h1:LHEOGCi+2CooiWkQB2BlzdMVh6rdRDyt5Wflv4yzvXY=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3/go.mod h1:JS7hed4L1fj0hXcyEejnW57/7LCetXggd+vwrRnYeII=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=

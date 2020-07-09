@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"github.com/ably/ably-go/ably"
-	"github.com/ably-forks/boomer"
 	"os"
-	"context"
+	"time"
+
+	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-go/ably"
 )
 
 func getEnv(name string) string {
@@ -29,6 +31,12 @@ func ablyApiKey() string {
 
 func ablyChannelName() string {
 	return getEnv("ABLY_CHANNEL_NAME")
+}
+
+func millisecondTimestamp() int64 {
+	nanos := time.Now().UnixNano()
+	millis := nanos / int64(time.Millisecond)
+	return millis
 }
 
 func subscribeTask(env string, apiKey string, channelName string) {
@@ -58,8 +66,10 @@ func subscribeTask(env string, apiKey string, channelName string) {
 	for {
 		select {
 		case msg := <-sub.MessageChannel():
+			timeElapsed := millisecondTimestamp() - msg.Timestamp
 			bytes := len(fmt.Sprint(msg.Data))
-			boomer.RecordSuccess("ably", "subscribe", 1, int64(bytes))
+
+			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
 		case <-ctx.Done():
 			return
 		}
