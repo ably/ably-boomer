@@ -10,7 +10,7 @@ RUN make build
 
 
 
-FROM golang:1.14.4-alpine3.12
+FROM alpine:3.12
 
 RUN addgroup -S ably && adduser -S ably -G ably
 
