@@ -4,7 +4,13 @@ image:
 	DOCKER_BUILDKIT=1 docker build -t ably-boomer:$(DOCKER_IMAGE_TAG) .
 
 build:
-	go vet
-	go build
+	go vet ./ably
+	go build -o ably-boomer ./...
 
-.PHONY: image build
+test:
+	go test ./ably
+
+fmt:
+	go fmt ./ably
+
+.PHONY: image build test fmt

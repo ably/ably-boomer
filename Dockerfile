@@ -12,7 +12,11 @@ RUN make build
 
 FROM golang:1.14.4-alpine3.12
 
+RUN addgroup -S ably && adduser -S ably -G ably
+
 WORKDIR /opt/ably
+
+USER ably
 
 COPY --from=builder /opt/ably/ably-boomer /opt/ably/ably-boomer
 
