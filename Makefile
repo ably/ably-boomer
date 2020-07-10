@@ -1,7 +1,10 @@
 DOCKER_IMAGE_TAG=latest
 
 image:
-	DOCKER_BUILDKIT=1 docker build -t ably-boomer:$(DOCKER_IMAGE_TAG) .
+	DOCKER_BUILDKIT=1 docker build -t ablyrealtime/ably-boomer:$(DOCKER_IMAGE_TAG) .
+
+push:
+	docker push ablyrealtime/ably-boomer:$(DOCKER_IMAGE_TAG)
 
 build:
 	go vet ./ably
@@ -13,4 +16,4 @@ test:
 fmt:
 	go fmt ./ably
 
-.PHONY: image build test fmt
+.PHONY: image push build test fmt
