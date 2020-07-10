@@ -1,19 +1,22 @@
 # ably-boomer
 
-Ably load generator for Locust.
+Ably load generator for Locust, based on the [boomer](https://github.com/myzhan/boomer) library.
 
-Ably-boomer will listen and report to a Locust master.
-
+Ably-boomer creates Ably realtime connections and subscribes to channels, in order to generate load, and measure delivery and latency statistics, reporting back to a Locust master.
 
 ## Build
 
-To build the Docker container:
+Ably-boomer is a go executable which may be packaged as a Docker container.
+
+To build the container:
 
 ```bash
 $ make image
 ```
 
 ## Usage
+
+Ably-boomer by default runs against Locust 1.1, but supports compatibility with Locust 0.9.0 via a command-line option.
 
 To run the Docker container against a Locust 0.9.0 master:
 
@@ -37,15 +40,15 @@ A Fanout type test will simulate a single channel with a large number of subscri
 
 Each Locust user will create a single subscription.
 
-No messages will be published to the channel - this will need to be done separately.
+No messages will be published to the channel - this will need to be performed separately.
 
 #### Personal
 
-A Personal type test will simulate a large number of channels, each with a small amount of subscribers.
+A Personal type test will simulate a large number of channels, each with a small number of subscribers.
 
-Each Locust user will create a new channel with some subscribers.
+Each Locust user will create a new channel with a randomly-generated name with a configurable number of subscriber connections for that channel.
 
-Messages will be published to the channel at a regular interval.
+The Ably-boomer user publishes messages to the channel periodically with a configurable interval.
 
 ### Test Configuration
 
