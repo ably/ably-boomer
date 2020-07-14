@@ -33,6 +33,8 @@ func randomDelay() {
 }
 
 func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription) {
+	defer sub.Close()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -73,7 +75,6 @@ func personalTask(testConfig TestConfig) {
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
-			defer sub.Close()
 
 			go reportSubscriptionToLocust(ctx, sub)
 		}
