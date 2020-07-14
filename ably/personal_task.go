@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-go/ably"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -29,6 +30,22 @@ func randomString(length int) string {
 func randomDelay() {
 	r := rand.Intn(60)
 	time.Sleep(time.Duration(r) * time.Second)
+}
+
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription) {
+	defer sub.Close()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-sub.MessageChannel():
+			timeElapsed := millisecondTimestamp() - msg.Timestamp
+			bytes := len(fmt.Sprint(msg.Data))
+
+			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
+		}
+	}
 }
 
 func personalTask(testConfig TestConfig) {
@@ -58,21 +75,8 @@ func personalTask(testConfig TestConfig) {
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
-			defer sub.Close()
 
-			go func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case msg := <-sub.MessageChannel():
-						timeElapsed := millisecondTimestamp() - msg.Timestamp
-						bytes := len(fmt.Sprint(msg.Data))
-
-						boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
-					}
-				}
-			}()
+			go reportSubscriptionToLocust(ctx, sub)
 		}
 	}
 
