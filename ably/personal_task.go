@@ -33,11 +33,24 @@ func randomDelay() {
 	time.Sleep(time.Duration(r) * time.Second)
 }
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription) {
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn) {
 	defer sub.Close()
+
+	connectionStateChannel := make(chan ably.State)
+	conn.On(connectionStateChannel)
+
+	var lastDisconnectTime int64 = 0
 
 	for {
 		select {
+		case connState := <-connectionStateChannel:
+			if connState.State == ably.StateConnDisconnected {
+				lastDisconnectTime = millisecondTimestamp()
+			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
+				timeDisconnected := millisecondTimestamp() - lastDisconnectTime
+
+				boomer.RecordSuccess("ably", "disconnection", timeDisconnected, 0)
+			}
 		case <-ctx.Done():
 			return
 		case msg := <-sub.MessageChannel():
@@ -82,7 +95,7 @@ func personalTask(testConfig TestConfig) {
 				return
 			}
 
-			go reportSubscriptionToLocust(ctx, sub)
+			go reportSubscriptionToLocust(ctx, sub, subClient.Connection)
 		}
 	}
 
