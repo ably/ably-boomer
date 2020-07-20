@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/ably-forks/boomer"
@@ -40,7 +41,14 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription) {
 		case <-ctx.Done():
 			return
 		case msg := <-sub.MessageChannel():
-			timeElapsed := millisecondTimestamp() - msg.Timestamp
+			timePublished, err := strconv.ParseInt(msg.Name, 10, 64)
+
+			if err != nil {
+				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				break
+			}
+
+			timeElapsed := millisecondTimestamp() - timePublished
 			bytes := len(fmt.Sprint(msg.Data))
 
 			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
@@ -49,8 +57,6 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription) {
 }
 
 func personalTask(testConfig TestConfig) {
-	randomDelay()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -92,12 +98,15 @@ func personalTask(testConfig TestConfig) {
 
 	channel := publishClient.Channels.Get(channelName)
 
+	randomDelay()
+
 	for {
 		select {
 		case <-ticker.C:
 			data := randomString(testConfig.MessageDataLength)
+			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
-			_, err := channel.Publish("test-event", data)
+			_, err := channel.Publish(timePublished, data)
 
 			if err != nil {
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
