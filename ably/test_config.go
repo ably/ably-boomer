@@ -10,6 +10,8 @@ const DefaultChannelName = "test_channel"
 const DefaultPublishInterval = "10"
 const DefaultNumSubscriptions = "2"
 const DefaultMessageDataLength = "2000"
+const DefaultPublisher = "false"
+const DefaultNumChannels = "64"
 
 type TestConfig struct {
 	TestType          string
@@ -19,6 +21,8 @@ type TestConfig struct {
 	PublishInterval   int
 	NumSubscriptions  int
 	MessageDataLength int
+	Publisher         bool
+	NumChannels       int
 }
 
 func newTestConfig() TestConfig {
@@ -30,6 +34,8 @@ func newTestConfig() TestConfig {
 		PublishInterval:   ablyPublishInterval(),
 		NumSubscriptions:  ablyNumSubscriptions(),
 		MessageDataLength: ablyMessageDataLength(),
+		Publisher:         ablyPublisher(),
+		NumChannels:       ablyNumChannels(),
 	}
 }
 
@@ -51,6 +57,22 @@ func getEnvWithDefault(name string, defaultValue string) string {
 	}
 
 	return defaultValue
+}
+
+func ablyPublisher() bool {
+	return getEnvWithDefault("ABLY_PUBLISHER", DefaultPublisher) == "true"
+}
+
+func ablyNumChannels() int {
+	value := getEnvWithDefault("ABLY_NUM_CHANNELS", DefaultNumChannels)
+
+	n, err := strconv.Atoi(value)
+
+	if err != nil {
+		panic("Expected an Integer for 'ABLY_NUM_CHANNELS' - got '" + value + "'")
+	}
+
+	return n
 }
 
 func ablyTestType() string {
