@@ -86,9 +86,6 @@ func personalTask(testConfig TestConfig) {
 		}
 	}
 
-	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
-	defer ticker.Stop()
-
 	publishClient, err := newAblyClient(testConfig)
 	if err != nil {
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
@@ -99,6 +96,9 @@ func personalTask(testConfig TestConfig) {
 	channel := publishClient.Channels.Get(channelName)
 
 	randomDelay()
+
+	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
