@@ -46,13 +46,15 @@ The test is configured through environment variables.
 
 Variable | Description | Default | Required
 --- | --- | --- | ---
-`ABLY_TEST_TYPE` | The type of load test to run. Can be either `fanout` or `personal`. | n/a | yes
+`ABLY_TEST_TYPE` | The type of load test to run. Can be either `fanout`, `personal` or `sharded`. | n/a | yes
 `ABLY_ENV` | The name of the Ably environment to run the load test against. | n/a | yes
 `ABLY_API_KEY` | The API key to use. | n/a | yes
 `ABLY_CHANNEL_NAME` | The name of the channel to use. Only used for `fanout` type tests. | `test_channel` | no
-`ABLY_PUBLISH_INTERVAL` | The number of seconds to wait between publishing messages. Only used for `personal` type tests. | `10` | no
+`ABLY_PUBLISH_INTERVAL` | The number of seconds to wait between publishing messages. Only used for `personal` and `sharded` type tests. | `10` | no
 `ABLY_NUM_SUBSCRIPTIONS` | The number of subscriptions to create per channel. Only used for `personal` type tests. | `2` | no
-`ABLY_MSG_DATA_LENGTH` | The number of characters to publish as message data. Only used for `personal` type tests. | `2000` | no
+`ABLY_MSG_DATA_LENGTH` | The number of characters to publish as message data. Only used for `personal` and `sharded` type tests. | `2000` | no
+`ABLY_PUBLISHER` | If `true`, the worker will publish messages to the channels. If `false`, the worker will subscribe to the channels. Only used for `sharded` type tests. | `false` | no
+`ABLY_NUM_CHANNELS` | The number of channels a worker could subscribe to. A channel will be chosen at random. Only used for `sharded` type tests. | `64` | no
 
 
 ## Build
