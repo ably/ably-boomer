@@ -49,7 +49,7 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
 				timeDisconnected := millisecondTimestamp() - lastDisconnectTime
 
-				boomer.RecordSuccess("ably", "disconnection", timeDisconnected, 0)
+				boomer.RecordSuccess("ably", "reconnect", timeDisconnected, 0)
 			}
 		case <-ctx.Done():
 			return
