@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-go/ably"
 )
 
 func fanOutTask(testConfig TestConfig) {
@@ -32,8 +33,21 @@ func fanOutTask(testConfig TestConfig) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	connectionStateChannel := make(chan ably.State)
+	client.Connection.On(connectionStateChannel)
+
+	var lastDisconnectTime int64 = 0
+
 	for {
 		select {
+		case connState := <-connectionStateChannel:
+			if connState.State == ably.StateConnDisconnected {
+				lastDisconnectTime = millisecondTimestamp()
+			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
+				timeDisconnected := millisecondTimestamp() - lastDisconnectTime
+
+				boomer.RecordSuccess("ably", "disconnection", timeDisconnected, 0)
+			}
 		case msg := <-sub.MessageChannel():
 			timeElapsed := millisecondTimestamp() - msg.Timestamp
 			bytes := len(fmt.Sprint(msg.Data))
