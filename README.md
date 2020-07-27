@@ -13,7 +13,7 @@ To run the Docker container against a Locust 0.9.0 master:
 ```bash
 $ docker run -e "ABLY_ENV=<env>" \
              -e "ABLY_API_KEY=<api key>" \
-             -e "ABLY_TEST_TYPE=<fanout | personal>" \
+             -e "ABLY_TEST_TYPE=<fanout | personal | sharded>" \
              --ulimit nofile=250000:250000 \
              --rm ablyrealtime/ably-boomer \
              --master-version-0.9.0 \
@@ -39,6 +39,14 @@ A Personal type test will simulate a large number of channels, each with a small
 Each Locust user will create a new channel with a randomly-generated name with a configurable number of subscriber connections for that channel.
 
 The Ably-boomer user publishes messages to the channel periodically with a configurable interval.
+
+### Sharded
+
+A Sharded type test will simulate a large number of subscribers, sharded over a number of channels.
+
+Each Locust user will create a single subscription to a channel.
+
+You can publish messages to these channels by running a task with the `ABLY_PUBLISHER` environment variable set to `true`.
 
 ## Test Configuration
 
