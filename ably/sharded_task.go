@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"math/rand"
 	"strconv"
 	"time"
 
@@ -13,12 +12,6 @@ import (
 
 func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
-}
-
-func randomChannelName(testConfig TestConfig) string {
-	r := rand.Intn(testConfig.NumChannels)
-
-	return generateChannelName(testConfig, r)
 }
 
 func publishOnInterval(testConfig TestConfig, ctx context.Context, channel *ably.RealtimeChannel, delay int) {
@@ -71,11 +64,9 @@ func shardedPublisherTask(testConfig TestConfig) {
 		go publishOnInterval(testConfig, ctx, channel, delay)
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		}
+	select {
+	case <-ctx.Done():
+		return
 	}
 }
 
@@ -83,34 +74,46 @@ func shardedSubscriberTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
-	channelName := randomChannelName(testConfig)
+	for i := 0; i < testConfig.NumSubscriptions; i++ {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			client, err := newAblyClient(testConfig)
+			if err != nil {
+				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				return
+			}
+			defer client.Close()
 
-	log.Println("Subscribing to channel:", channelName)
+			channelName := generateChannelName(testConfig, i)
 
-	client, err := newAblyClient(testConfig)
+			log.Println("Subscribing to channel:", channelName)
 
-	if err != nil {
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+			channel := client.Channels.Get(channelName)
+			defer channel.Close()
+
+			sub, err := channel.Subscribe()
+			if err != nil {
+				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				return
+			}
+
+			go reportSubscriptionToLocust(ctx, sub, client.Connection)
+		}
+	}
+
+	select {
+	case <-ctx.Done():
 		return
 	}
-	defer client.Close()
-
-	channel := client.Channels.Get(channelName)
-	defer channel.Close()
-
-	sub, err := channel.Subscribe()
-	if err != nil {
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-		return
-	}
-
-	reportSubscriptionToLocust(ctx, sub, client.Connection)
 }
 
 func curryShardedTask(testConfig TestConfig) func() {
 	log.Println("Test Type: Sharded")
 	log.Println("Ably Env:", testConfig.Env)
-	log.Println("Number of channels:", testConfig.NumChannels)
+	log.Println("Number of Channels:", testConfig.NumChannels)
+	log.Println("Number of Subscriptions:", testConfig.NumSubscriptions)
 	log.Println("Publisher:", testConfig.Publisher)
 
 	if testConfig.Publisher {
