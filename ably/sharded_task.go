@@ -64,10 +64,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 		go publishOnInterval(testConfig, ctx, channel, delay)
 	}
 
-	select {
-	case <-ctx.Done():
-		return
-	}
+	<-ctx.Done()
 }
 
 func shardedSubscriberTask(testConfig TestConfig) {
@@ -103,10 +100,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 		}
 	}
 
-	select {
-	case <-ctx.Done():
-		return
-	}
+	<-ctx.Done()
 }
 
 func curryShardedTask(testConfig TestConfig) func() {
