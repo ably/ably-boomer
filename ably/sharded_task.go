@@ -46,15 +46,15 @@ func shardedPublisherTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	client, err := newAblyClient(testConfig)
+	if err != nil {
+		boomer.RecordFailure("ably", "publish", 0, err.Error())
+		return
+	}
+	defer client.Close()
+
 	for i := 0; i < testConfig.NumChannels; i++ {
 		channelName := generateChannelName(testConfig, i)
-
-		client, err := newAblyClient(testConfig)
-		if err != nil {
-			boomer.RecordFailure("ably", "publish", 0, err.Error())
-			return
-		}
-		defer client.Close()
 
 		channel := client.Channels.Get(channelName)
 		defer channel.Close()
