@@ -44,7 +44,7 @@ The Ably-boomer user publishes messages to the channel periodically with a confi
 
 A Sharded type test will simulate a large number of subscribers, sharded over a number of channels.
 
-Each Locust user will create a single subscription to a channel.
+Each Locust user will create a number of subscribers, distributed evenly over the configured number of channels.
 
 You can publish messages to these channels by running a task with the `ABLY_PUBLISHER` environment variable set to `true`.
 
@@ -59,7 +59,7 @@ Variable | Description | Default | Required
 `ABLY_API_KEY` | The API key to use. | n/a | yes
 `ABLY_CHANNEL_NAME` | The name of the channel to use. Only used for `fanout` type tests. | `test_channel` | no
 `ABLY_PUBLISH_INTERVAL` | The number of seconds to wait between publishing messages. Only used for `personal` and `sharded` type tests. | `10` | no
-`ABLY_NUM_SUBSCRIPTIONS` | The number of subscriptions to create per channel. Only used for `personal` type tests. | `2` | no
+`ABLY_NUM_SUBSCRIPTIONS` | The number of subscriptions to create per channel. Only used for `personal` and `sharded` type tests. | `2` | no
 `ABLY_MSG_DATA_LENGTH` | The number of characters to publish as message data. Only used for `personal` and `sharded` type tests. | `2000` | no
 `ABLY_PUBLISHER` | If `true`, the worker will publish messages to the channels. If `false`, the worker will subscribe to the channels. Only used for `sharded` type tests. | `false` | no
 `ABLY_NUM_CHANNELS` | The number of channels a worker could subscribe to. A channel will be chosen at random. Only used for `sharded` type tests. | `64` | no
