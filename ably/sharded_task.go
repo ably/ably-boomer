@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -104,39 +103,8 @@ func shardedSubscriberTask(testConfig TestConfig) {
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
-	defer sub.Close()
 
-	connectionStateChannel := make(chan ably.State)
-	client.Connection.On(connectionStateChannel)
-
-	var lastDisconnectTime int64 = 0
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case connState := <-connectionStateChannel:
-			if connState.State == ably.StateConnDisconnected {
-				lastDisconnectTime = millisecondTimestamp()
-			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
-				timeDisconnected := millisecondTimestamp() - lastDisconnectTime
-
-				boomer.RecordSuccess("ably", "reconnect", timeDisconnected, 0)
-			}
-		case msg := <-sub.MessageChannel():
-			timePublished, err := strconv.ParseInt(msg.Name, 10, 64)
-
-			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-				break
-			}
-
-			timeElapsed := millisecondTimestamp() - timePublished
-			bytes := len(fmt.Sprint(msg.Data))
-
-			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
-		}
-	}
+	reportSubscriptionToLocust(ctx, sub, client.Connection)
 }
 
 func curryShardedTask(testConfig TestConfig) func() {
