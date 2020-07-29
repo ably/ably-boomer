@@ -7,6 +7,7 @@ import (
 )
 
 const DefaultChannelName = "test_channel"
+const DefaultCPUProfile = ""
 const DefaultPublishInterval = "10"
 const DefaultNumSubscriptions = "2"
 const DefaultMessageDataLength = "2000"
@@ -18,6 +19,7 @@ type TestConfig struct {
 	Env               string
 	ApiKey            string
 	ChannelName       string
+	CPUProfile        string
 	PublishInterval   int
 	NumSubscriptions  int
 	MessageDataLength int
@@ -31,6 +33,7 @@ func newTestConfig() TestConfig {
 		Env:               ablyEnv(),
 		ApiKey:            ablyApiKey(),
 		ChannelName:       ablyChannelName(),
+		CPUProfile:        ablyCPUProfile(),
 		PublishInterval:   ablyPublishInterval(),
 		NumSubscriptions:  ablyNumSubscriptions(),
 		MessageDataLength: ablyMessageDataLength(),
@@ -89,6 +92,10 @@ func ablyApiKey() string {
 
 func ablyChannelName() string {
 	return getEnvWithDefault("ABLY_CHANNEL_NAME", DefaultChannelName)
+}
+
+func ablyCPUProfile() string {
+	return getEnvWithDefault("ABLY_CPU_PROFILE", DefaultCPUProfile)
 }
 
 func ablyPublishInterval() int {

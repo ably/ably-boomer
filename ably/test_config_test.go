@@ -58,6 +58,7 @@ func TestNewTestConfig(t *testing.T) {
 		apiKey := "key"
 
 		defaultChannelName := "test_channel"
+		defaultCPUProfile := ""
 		defaultPublishInterval := 10
 		defaultNumSubscriptions := 2
 		defaultMessageDataLength := 2000
@@ -85,6 +86,10 @@ func TestNewTestConfig(t *testing.T) {
 			t.Errorf("ChannelName was incorrect, got: %s, wanted: %s.", testConfig.ChannelName, defaultChannelName)
 		}
 
+		if testConfig.CPUProfile != defaultCPUProfile {
+			t.Errorf("CPUProfile was incorrect, got: %s, wanted: %s.", testConfig.CPUProfile, defaultCPUProfile)
+		}
+
 		if testConfig.PublishInterval != defaultPublishInterval {
 			t.Errorf("PublishInterval was incorrect, got: %d, wanted: %d.", testConfig.PublishInterval, defaultPublishInterval)
 		}
@@ -103,6 +108,7 @@ func TestNewTestConfig(t *testing.T) {
 		env := "loadtest"
 		apiKey := "key"
 		channelName := "different-ably-channel"
+		cpuProfile := "/var/log/cpuprofile.pprof"
 		publishInterval := 60
 		numSubscriptions := 31250
 		messageDataLength := 9001
@@ -111,6 +117,7 @@ func TestNewTestConfig(t *testing.T) {
 		os.Setenv("ABLY_ENV", env)
 		os.Setenv("ABLY_API_KEY", apiKey)
 		os.Setenv("ABLY_CHANNEL_NAME", channelName)
+		os.Setenv("ABLY_CPU_PROFILE", cpuProfile)
 		os.Setenv("ABLY_PUBLISH_INTERVAL", strconv.Itoa(publishInterval))
 		os.Setenv("ABLY_NUM_SUBSCRIPTIONS", strconv.Itoa(numSubscriptions))
 		os.Setenv("ABLY_MSG_DATA_LENGTH", strconv.Itoa(messageDataLength))
@@ -132,6 +139,10 @@ func TestNewTestConfig(t *testing.T) {
 
 		if testConfig.ChannelName != channelName {
 			t.Errorf("ChannelName was incorrect, got: %s, wanted: %s.", testConfig.ChannelName, channelName)
+		}
+
+		if testConfig.CPUProfile != cpuProfile {
+			t.Errorf("CPUProfile was incorrect, got: %s, wanted: %s.", testConfig.CPUProfile, cpuProfile)
 		}
 
 		if testConfig.PublishInterval != publishInterval {

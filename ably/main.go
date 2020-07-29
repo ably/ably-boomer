@@ -1,6 +1,10 @@
 package main
 
 import (
+	"log"
+	"os"
+	"runtime/pprof"
+
 	"github.com/ably-forks/boomer"
 )
 
@@ -25,6 +29,15 @@ func main() {
 	task := &boomer.Task{
 		Name: testConfig.TestType,
 		Fn:   fn,
+	}
+
+	if testConfig.CPUProfile != "" {
+		f, err := os.Create(testConfig.CPUProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
 	}
 
 	boomer.Run(task)
