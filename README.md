@@ -64,6 +64,13 @@ Variable | Description | Default | Required
 `ABLY_PUBLISHER` | If `true`, the worker will publish messages to the channels. If `false`, the worker will subscribe to the channels. Only used for `sharded` type tests. | `false` | no
 `ABLY_NUM_CHANNELS` | The number of channels a worker could subscribe to. A channel will be chosen at random. Only used for `sharded` type tests. | `64` | no
 
+## Performance Options
+
+The test can be configured to debug performance. Options are set through environment variables.
+
+Variable | Description | Default | Required
+--- | --- | --- | ---
+`PERF_CPU_PROFILE` | The file path to write the pprof cpu profile | n/a | no
 
 ## Build
 
