@@ -12,7 +12,6 @@ const DefaultNumSubscriptions = "2"
 const DefaultMessageDataLength = "2000"
 const DefaultPublisher = "false"
 const DefaultNumChannels = "64"
-const DefaultCPUProfile = ""
 
 type TestConfig struct {
 	TestType          string
@@ -24,7 +23,6 @@ type TestConfig struct {
 	MessageDataLength int
 	Publisher         bool
 	NumChannels       int
-	CPUProfile        string
 }
 
 func newTestConfig() TestConfig {
@@ -38,7 +36,6 @@ func newTestConfig() TestConfig {
 		MessageDataLength: ablyMessageDataLength(),
 		Publisher:         ablyPublisher(),
 		NumChannels:       ablyNumChannels(),
-		CPUProfile:        ablyCPUProfile(),
 	}
 }
 
@@ -128,8 +125,4 @@ func ablyMessageDataLength() int {
 	}
 
 	return n
-}
-
-func ablyCPUProfile() string {
-	return getEnvWithDefault("PERF_CPU_PROFILE", DefaultCPUProfile)
 }

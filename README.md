@@ -70,7 +70,30 @@ The test can be configured to debug performance. Options are set through environ
 
 Variable | Description | Default | Required
 --- | --- | --- | ---
-`PERF_CPU_PROFILE` | The file path to write the pprof cpu profile | n/a | no
+`PERF_CPU_PROFILE_DIR` | The directorty path to write the pprof cpu profile | n/a | no
+`PERF_CPU_S3_BUCKET` | The name of the s3 bucket to upload pprof data to | n/a | no
+
+If uploading data to s3, the s3 client is configured through the default environment as per the
+[s3 client documentation](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
+
+
+The `AWS_REGION` must be set by either specifying the `AWS_REGION` environment variable or to load the environment
+from the configuration by setting `AWS_SDK_LOAD_CONFIG=true`. Credentials will be retrieved from `~/.aws` and a
+profile can be selected by setting the `AWS_PROFILE` environment variable. If not using the credentials file, the
+settings can be provided directly through environment variables.
+
+
+Variable | Description | Default | Required
+--- | --- | --- | ---
+`AWS_REGION` | The AWS region to use, i.e. `us-west-2` | n/a | no
+`AWS_SDK_LOAD_CONFIG` | A boolean indicating that region should be read from config in `~/.aws` | n/a | no
+`AWS_PROFILE` | The aws profile to use in the shared credentials file | "default" | no
+`AWS_ACCESS_KEY_ID` | The AWS access key id credential to use | n/a | no
+`AWS_SECRET_ACCESS_KEY`| The AWS secret access key to use | n/a | no
+`AWS_SESSION_TOKEN` | The AWS session token to use | n/a | no
+
+
+
 
 ## Build
 

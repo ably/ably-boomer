@@ -1,3 +1,5 @@
+.vscode/
+coverage/
 *.out
 *.test
 ably-boomer

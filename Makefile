@@ -10,8 +10,14 @@ build:
 	go vet ./ably
 	go build -o ably-boomer ./...
 
+cover:
+	mkdir -p ./coverage
+	go test -covermode=atomic -coverprofile=coverage/coverage.out ./ably ./ably/perf
+	go tool cover -html=./coverage/coverage.out -o=./coverage/coverage.html
+
+
 test:
-	go test ./ably
+	go test ./ably ./ably/perf
 
 fmt:
 	go fmt ./ably
