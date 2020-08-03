@@ -44,6 +44,8 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 
 func shardedPublisherTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	client, err := newAblyClient(testConfig)
