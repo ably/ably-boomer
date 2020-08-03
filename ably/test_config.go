@@ -6,39 +6,48 @@ import (
 	"strings"
 )
 
+// DefaultChannelName defines the channel name used by default in test runs
 const DefaultChannelName = "test_channel"
-const DefaultPublishInterval = "10"
-const DefaultNumSubscriptions = "2"
-const DefaultMessageDataLength = "2000"
-const DefaultPublisher = "false"
-const DefaultNumChannels = "64"
-const DefaultCPUProfile = ""
 
+// DefaultPublishInterval defines the default time between publishing message
+const DefaultPublishInterval = "10"
+
+// DefaultNumSubscriptions defines the default number of subscibers in test runs
+const DefaultNumSubscriptions = "2"
+
+// DefaultMessageDataLength defines the default size of messages in test runs
+const DefaultMessageDataLength = "2000"
+
+// DefaultPublisher defines if the test run should publish by default
+const DefaultPublisher = "false"
+
+// DefaultNumChannels defines the default number of channels used in test runs
+const DefaultNumChannels = "64"
+
+// TestConfig defines the configuration for a specific test run
 type TestConfig struct {
 	TestType          string
 	Env               string
-	ApiKey            string
+	APIKey            string
 	ChannelName       string
 	PublishInterval   int
 	NumSubscriptions  int
 	MessageDataLength int
 	Publisher         bool
 	NumChannels       int
-	CPUProfile        string
 }
 
 func newTestConfig() TestConfig {
 	return TestConfig{
 		TestType:          ablyTestType(),
 		Env:               ablyEnv(),
-		ApiKey:            ablyApiKey(),
+		APIKey:            ablyAPIKey(),
 		ChannelName:       ablyChannelName(),
 		PublishInterval:   ablyPublishInterval(),
 		NumSubscriptions:  ablyNumSubscriptions(),
 		MessageDataLength: ablyMessageDataLength(),
 		Publisher:         ablyPublisher(),
 		NumChannels:       ablyNumChannels(),
-		CPUProfile:        ablyCPUProfile(),
 	}
 }
 
@@ -86,7 +95,7 @@ func ablyEnv() string {
 	return getEnv("ABLY_ENV")
 }
 
-func ablyApiKey() string {
+func ablyAPIKey() string {
 	return getEnv("ABLY_API_KEY")
 }
 
@@ -128,8 +137,4 @@ func ablyMessageDataLength() int {
 	}
 
 	return n
-}
-
-func ablyCPUProfile() string {
-	return getEnvWithDefault("PERF_CPU_PROFILE", DefaultCPUProfile)
 }

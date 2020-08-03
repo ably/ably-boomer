@@ -2,10 +2,9 @@ package main
 
 import (
 	"log"
-	"os"
-	"runtime/pprof"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/ably/perf"
 )
 
 func taskFn(testConfig TestConfig) func() {
@@ -23,6 +22,7 @@ func taskFn(testConfig TestConfig) func() {
 
 func main() {
 	testConfig := newTestConfig()
+	perf := perf.New()
 
 	fn := taskFn(testConfig)
 
@@ -31,14 +31,11 @@ func main() {
 		Fn:   fn,
 	}
 
-	if testConfig.CPUProfile != "" {
-		f, err := os.Create(testConfig.CPUProfile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+	perfError := perf.Start()
+	if perfError != nil {
+		log.Fatalf("errror starting perf: %s", perfError)
 	}
+	defer perf.Stop()
 
 	boomer.Run(task)
 }
