@@ -49,7 +49,6 @@ func personalTask(testConfig TestConfig) {
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
-			defer subClient.Close()
 
 			channel := subClient.Channels.Get(channelName)
 			defer channel.Close()
