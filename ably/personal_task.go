@@ -33,6 +33,8 @@ func randomDelay() {
 
 func personalTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	channelName := randomString(channelNameLength)

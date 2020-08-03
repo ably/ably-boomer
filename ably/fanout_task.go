@@ -28,6 +28,8 @@ func fanOutTask(testConfig TestConfig) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	reportSubscriptionToLocust(ctx, sub, client.Connection)
