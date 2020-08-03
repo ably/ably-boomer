@@ -77,8 +77,8 @@ func TestNewTestConfig(t *testing.T) {
 			t.Errorf("Env was incorrect, got: %s, wanted: %s.", testConfig.Env, env)
 		}
 
-		if testConfig.ApiKey != apiKey {
-			t.Errorf("ApiKey was incorrect, got: %s, wanted: %s.", testConfig.ApiKey, apiKey)
+		if testConfig.APIKey != apiKey {
+			t.Errorf("ApiKey was incorrect, got: %s, wanted: %s.", testConfig.APIKey, apiKey)
 		}
 
 		if testConfig.ChannelName != defaultChannelName {
@@ -126,8 +126,8 @@ func TestNewTestConfig(t *testing.T) {
 			t.Errorf("Env was incorrect, got: %s, wanted: %s.", testConfig.Env, env)
 		}
 
-		if testConfig.ApiKey != apiKey {
-			t.Errorf("ApiKey was incorrect, got: %s, wanted: %s.", testConfig.ApiKey, apiKey)
+		if testConfig.APIKey != apiKey {
+			t.Errorf("ApiKey was incorrect, got: %s, wanted: %s.", testConfig.APIKey, apiKey)
 		}
 
 		if testConfig.ChannelName != channelName {

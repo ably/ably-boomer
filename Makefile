@@ -24,7 +24,7 @@ build:
 
 cover: lint
 	mkdir -p ./coverage
-	go test -covermode=atomic -coverprofile=coverage/coverage.out ./ably ./ably/perf
+	go test -covermode=atomic -coverprofile=coverage/coverage.out ./ably/...
 	go tool cover -html=./coverage/coverage.out -o=./coverage/coverage.html
 
 GOLINT = $(BIN)/golint
