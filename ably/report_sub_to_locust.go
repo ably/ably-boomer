@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/ably/ably-go/ably"
 )
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn) {
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
 	defer sub.Close()
 
 	connectionStateChannel := make(chan ably.State)
@@ -21,7 +22,8 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 		select {
 		case connState, ok := <-connectionStateChannel:
 			if !ok {
-				return
+				err := errors.New("Connection State Channel Closed")
+				errorChannel <- err
 			}
 
 			if connState.State == ably.StateConnDisconnected {
@@ -35,7 +37,8 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			return
 		case msg, ok := <-sub.MessageChannel():
 			if !ok {
-				return
+				err := errors.New("Sub Message Channel Closed")
+				errorChannel <- err
 			}
 
 			timePublished, err := strconv.ParseInt(msg.Name, 10, 64)

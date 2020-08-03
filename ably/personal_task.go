@@ -37,6 +37,8 @@ func personalTask(testConfig TestConfig) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	errorChannel := make(chan error)
+
 	channelName := randomString(channelNameLength)
 
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
@@ -59,7 +61,7 @@ func personalTask(testConfig TestConfig) {
 				return
 			}
 
-			go reportSubscriptionToLocust(ctx, sub, subClient.Connection)
+			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel)
 		}
 	}
 
@@ -80,6 +82,9 @@ func personalTask(testConfig TestConfig) {
 
 	for {
 		select {
+		case err := <-errorChannel:
+			log.Println(err)
+			return
 		case <-ticker.C:
 			data := randomString(testConfig.MessageDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)

@@ -73,6 +73,8 @@ func shardedSubscriberTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	errorChannel := make(chan error)
+
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
@@ -98,11 +100,19 @@ func shardedSubscriberTask(testConfig TestConfig) {
 				return
 			}
 
-			go reportSubscriptionToLocust(ctx, sub, client.Connection)
+			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel)
 		}
 	}
 
-	<-ctx.Done()
+	for {
+		select {
+		case err := <-errorChannel:
+			log.Println(err)
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func curryShardedTask(testConfig TestConfig) func() {
