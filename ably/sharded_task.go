@@ -14,7 +14,7 @@ func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
 }
 
-func publishOnInterval(testConfig TestConfig, ctx context.Context, channel *ably.RealtimeChannel, delay int) {
+func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int) {
 	log.Println("Delaying publish to", channel.Name, "for", delay+testConfig.PublishInterval, "seconds")
 	time.Sleep(time.Duration(delay) * time.Second)
 
@@ -61,7 +61,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 
 		delay := i % testConfig.PublishInterval
 
-		go publishOnInterval(testConfig, ctx, channel, delay)
+		go publishOnInterval(ctx, testConfig, channel, delay)
 	}
 
 	<-ctx.Done()
@@ -116,9 +116,9 @@ func curryShardedTask(testConfig TestConfig) func() {
 		return func() {
 			shardedPublisherTask(testConfig)
 		}
-	} else {
-		return func() {
-			shardedSubscriberTask(testConfig)
-		}
+	}
+
+	return func() {
+		shardedSubscriberTask(testConfig)
 	}
 }
