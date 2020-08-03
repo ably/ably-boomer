@@ -19,7 +19,11 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 
 	for {
 		select {
-		case connState := <-connectionStateChannel:
+		case connState, ok := <-connectionStateChannel:
+			if !ok {
+				return
+			}
+
 			if connState.State == ably.StateConnDisconnected {
 				lastDisconnectTime = millisecondTimestamp()
 			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
@@ -29,7 +33,11 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			}
 		case <-ctx.Done():
 			return
-		case msg := <-sub.MessageChannel():
+		case msg, ok := <-sub.MessageChannel():
+			if !ok {
+				return
+			}
+
 			timePublished, err := strconv.ParseInt(msg.Name, 10, 64)
 
 			if err != nil {
