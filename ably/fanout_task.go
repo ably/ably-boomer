@@ -32,7 +32,18 @@ func fanOutTask(testConfig TestConfig) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
-	reportSubscriptionToLocust(ctx, sub, client.Connection)
+	errorChannel := make(chan error)
+	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel)
+
+	for {
+		select {
+		case err := <-errorChannel:
+			log.Println(err)
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func curryFanOutTask(testConfig TestConfig) func() {
