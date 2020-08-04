@@ -22,6 +22,7 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			if !ok {
 				err := errors.New("Connection State Channel Closed")
 				errorChannel <- err
+				continue
 			}
 
 			if connState.State == ably.StateConnDisconnected {
@@ -37,6 +38,7 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			if !ok {
 				err := errors.New("Sub Message Channel Closed")
 				errorChannel <- err
+				continue
 			}
 
 			timePublished, err := strconv.ParseInt(msg.Name, 10, 64)
