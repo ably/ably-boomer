@@ -11,8 +11,6 @@ import (
 )
 
 func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
-	defer sub.Close()
-
 	connectionStateChannel := make(chan ably.State)
 	conn.On(connectionStateChannel)
 

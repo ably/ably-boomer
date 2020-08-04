@@ -15,7 +15,6 @@ func fanOutTask(testConfig TestConfig) {
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
-
 	defer client.Close()
 
 	channel := client.Channels.Get(testConfig.ChannelName)
@@ -26,6 +25,7 @@ func fanOutTask(testConfig TestConfig) {
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
+	defer sub.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

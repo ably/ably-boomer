@@ -99,6 +99,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
+			defer sub.Close()
 
 			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel)
 		}
