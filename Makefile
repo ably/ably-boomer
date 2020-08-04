@@ -20,7 +20,7 @@ push:
 
 build:
 	go vet ./ably
-	go build -o ably-boomer ./...
+	go build -o ably-boomer ./ably
 
 cover: lint
 	mkdir -p ./coverage
