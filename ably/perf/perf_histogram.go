@@ -79,7 +79,10 @@ func NewDefaultHistogram() *Histogram {
 // of buckets, starting from the provided min value and spread with the
 // specified bucket width
 func NewHistogram(bucketCount int, minValue int64, bucketWidth int64) *Histogram {
-	bucketWidth = absInt64(bucketWidth)
+	if bucketWidth < 0 {
+		bucketWidth = -1 * bucketWidth
+		minValue = minValue - (bucketWidth * int64(bucketCount)) + 1
+	}
 
 	histogram := &Histogram{
 		bucketCount: bucketCount,
@@ -256,11 +259,4 @@ func (h *Histogram) maxPossibleValue() int64 {
 // of 4 samples is 2 samples (where the percentile line runs between 2 and 3).
 func percentileToSamples(totalSamples, numerator, denominator int64) int64 {
 	return 1 + (((totalSamples * numerator) - 1) / denominator)
-}
-
-func absInt64(i int64) int64 {
-	if i < 0 {
-		return -1 * i
-	}
-	return i
 }
