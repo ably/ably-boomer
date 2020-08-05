@@ -67,6 +67,8 @@ func shardedPublisherTask(testConfig TestConfig) {
 	}
 
 	<-ctx.Done()
+
+	client.Close()
 }
 
 func shardedSubscriberTask(testConfig TestConfig) {
@@ -74,6 +76,8 @@ func shardedSubscriberTask(testConfig TestConfig) {
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	errorChannel := make(chan error)
+
+	clients := []ably.RealtimeClient{}
 
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
 		select {
@@ -86,6 +90,8 @@ func shardedSubscriberTask(testConfig TestConfig) {
 				return
 			}
 			defer client.Close()
+
+			clients = append(clients, *client)
 
 			channelName := generateChannelName(testConfig, i)
 
@@ -105,12 +111,20 @@ func shardedSubscriberTask(testConfig TestConfig) {
 		}
 	}
 
+	cleanup := func() {
+		for _, client := range clients {
+			client.Close()
+		}
+	}
+
 	for {
 		select {
 		case err := <-errorChannel:
 			log.Println(err)
+			cleanup()
 			return
 		case <-ctx.Done():
+			cleanup()
 			return
 		}
 	}
