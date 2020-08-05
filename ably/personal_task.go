@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-go/ably"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -41,6 +42,8 @@ func personalTask(testConfig TestConfig) {
 
 	channelName := randomString(channelNameLength)
 
+	subClients := []ably.RealtimeClient{}
+
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
@@ -52,6 +55,8 @@ func personalTask(testConfig TestConfig) {
 				return
 			}
 			defer subClient.Close()
+
+			subClients = append(subClients, *subClient)
 
 			channel := subClient.Channels.Get(channelName)
 			defer channel.Close()
@@ -77,6 +82,14 @@ func personalTask(testConfig TestConfig) {
 	channel := publishClient.Channels.Get(channelName)
 	defer channel.Close()
 
+	cleanup := func() {
+		publishClient.Close()
+
+		for _, subClient := range subClients {
+			subClient.Close()
+		}
+	}
+
 	randomDelay()
 
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
@@ -86,6 +99,7 @@ func personalTask(testConfig TestConfig) {
 		select {
 		case err := <-errorChannel:
 			log.Println(err)
+			cleanup()
 			return
 		case <-ticker.C:
 			data := randomString(testConfig.MessageDataLength)
@@ -99,6 +113,7 @@ func personalTask(testConfig TestConfig) {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
+			cleanup()
 			return
 		}
 	}

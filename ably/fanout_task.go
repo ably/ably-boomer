@@ -38,8 +38,10 @@ func fanOutTask(testConfig TestConfig) {
 	select {
 	case err := <-errorChannel:
 		log.Println(err)
+		client.Close()
 		return
 	case <-ctx.Done():
+		client.Close()
 		return
 	}
 }
