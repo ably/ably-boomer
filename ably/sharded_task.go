@@ -15,7 +15,7 @@ func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
 }
 
-func publishOnInterval(ctx context.Context, perf *perf.Reporter, testConfig TestConfig, channel *ably.RealtimeChannel, delay int) {
+func publishOnInterval(ctx context.Context, l perf.LocustReporter, testConfig TestConfig, channel *ably.RealtimeChannel, delay int) {
 	log.Println("Delaying publish to", channel.Name, "for", delay+testConfig.PublishInterval, "seconds")
 	time.Sleep(time.Duration(delay) * time.Second)
 
@@ -33,9 +33,9 @@ func publishOnInterval(ctx context.Context, perf *perf.Reporter, testConfig Test
 			_, err := channel.Publish(timePublished, data)
 
 			if err != nil {
-				perf.RecordFailure("ably", "publish", 0, err.Error())
+				l.RecordFailure("ably", "publish", 0, err.Error())
 			} else {
-				perf.RecordSuccess("ably", "publish", 0, 0)
+				l.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
 			return
@@ -43,7 +43,7 @@ func publishOnInterval(ctx context.Context, perf *perf.Reporter, testConfig Test
 	}
 }
 
-func shardedPublisherTask(testConfig TestConfig, perf *perf.Reporter) {
+func shardedPublisherTask(testConfig TestConfig, l perf.LocustReporter) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -51,7 +51,7 @@ func shardedPublisherTask(testConfig TestConfig, perf *perf.Reporter) {
 
 	client, err := newAblyClient(testConfig)
 	if err != nil {
-		perf.RecordFailure("ably", "publish", 0, err.Error())
+		l.RecordFailure("ably", "publish", 0, err.Error())
 		return
 	}
 	defer client.Close()
@@ -64,7 +64,7 @@ func shardedPublisherTask(testConfig TestConfig, perf *perf.Reporter) {
 
 		delay := i % testConfig.PublishInterval
 
-		go publishOnInterval(ctx, perf, testConfig, channel, delay)
+		go publishOnInterval(ctx, l, testConfig, channel, delay)
 	}
 
 	<-ctx.Done()
@@ -72,7 +72,7 @@ func shardedPublisherTask(testConfig TestConfig, perf *perf.Reporter) {
 	client.Close()
 }
 
-func shardedSubscriberTask(testConfig TestConfig, perf *perf.Reporter) {
+func shardedSubscriberTask(testConfig TestConfig, l perf.LocustReporter) {
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -87,7 +87,7 @@ func shardedSubscriberTask(testConfig TestConfig, perf *perf.Reporter) {
 		default:
 			client, err := newAblyClient(testConfig)
 			if err != nil {
-				perf.RecordFailure("ably", "subscribe", 0, err.Error())
+				l.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
 			defer client.Close()
@@ -103,12 +103,12 @@ func shardedSubscriberTask(testConfig TestConfig, perf *perf.Reporter) {
 
 			sub, err := channel.Subscribe()
 			if err != nil {
-				perf.RecordFailure("ably", "subscribe", 0, err.Error())
+				l.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
 			defer sub.Close()
 
-			go reportSubscriptionToLocust(ctx, perf, sub, client.Connection, errorChannel)
+			go reportSubscriptionToLocust(ctx, l, sub, client.Connection, errorChannel)
 		}
 	}
 
@@ -131,7 +131,7 @@ func shardedSubscriberTask(testConfig TestConfig, perf *perf.Reporter) {
 	}
 }
 
-func curryShardedTask(testConfig TestConfig, perf *perf.Reporter) func() {
+func curryShardedTask(testConfig TestConfig, l perf.LocustReporter) func() {
 	log.Println("Test Type: Sharded")
 	log.Println("Ably Env:", testConfig.Env)
 	log.Println("Number of Channels:", testConfig.NumChannels)
@@ -142,11 +142,11 @@ func curryShardedTask(testConfig TestConfig, perf *perf.Reporter) func() {
 		log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
 
 		return func() {
-			shardedPublisherTask(testConfig, perf)
+			shardedPublisherTask(testConfig, l)
 		}
 	}
 
 	return func() {
-		shardedSubscriberTask(testConfig, perf)
+		shardedSubscriberTask(testConfig, l)
 	}
 }

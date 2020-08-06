@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"io"
 	"math/rand"
+	"os"
+	"path"
 	"sort"
+	"strconv"
 	"testing"
 )
 
@@ -395,7 +398,7 @@ func TestHistogramEncoding(t *testing.T) {
 		origHistograms := make([]*Histogram, 0, expectedHistogramCount)
 
 		writer := NewHistogramWriter(&buf)
-		writeNilErr := writer.Write(nil)
+		writeNilErr := writer.Write("", nil)
 
 		if writeNilErr == nil {
 			ts.Errorf("expected writer.write(nil) to return error")
@@ -409,7 +412,8 @@ func TestHistogramEncoding(t *testing.T) {
 				histogram.Add(int64(rand.Intn(60001)))
 			}
 
-			writeErr := writer.Write(histogram)
+			id := strconv.Itoa(i)
+			writeErr := writer.Write(id, histogram)
 			if writeErr != nil {
 				ts.Errorf("unexpected error encoding histogram: %s", writeErr)
 			}
@@ -419,13 +423,22 @@ func TestHistogramEncoding(t *testing.T) {
 
 		histogramCount := 0
 		for {
-			histogram, err := reader.Read()
+			expectedID := strconv.Itoa(histogramCount)
+			id, histogram, err := reader.Read()
 
 			if err == io.EOF {
 				break
 			} else if err != nil {
 				ts.Errorf("unexpected error decoding histogram: %s", err)
 				break
+			}
+
+			if id != expectedID {
+				ts.Errorf(
+					"unecpected histogram id, got %s, wanted %s",
+					id,
+					expectedID,
+				)
 			}
 
 			if histogramCount < expectedHistogramCount {
@@ -452,6 +465,73 @@ func TestHistogramEncoding(t *testing.T) {
 		}
 	})
 }
+
+func assertEqualHistogramFile(
+	t *testing.T,
+	fileName string,
+	expectedHistMap map[string]*Histogram,
+) {
+	fileExt := path.Ext(fileName)
+	expectedFileExt := ".hist"
+	if fileExt != expectedFileExt {
+		t.Fatalf(
+			"unexpected histogram extension, got: %s, wanted: %s",
+			fileExt,
+			expectedFileExt,
+		)
+	}
+	histStat, histStatErr := os.Stat(fileName)
+	if histStatErr != nil {
+		t.Fatalf(
+			"histogram file missing from disk: %s",
+			histStatErr,
+		)
+	} else if histStat.Size() == 0 {
+		t.Fatalf("histogram file is empty")
+	}
+
+	histFile, histFileErr := os.Open(fileName)
+	if histFileErr != nil {
+		t.Fatalf(
+			"unexpected error opening histogram file: %s",
+			histFileErr,
+		)
+	}
+
+	reader := NewHistogramReader(histFile)
+
+	histMap := map[string]*Histogram{}
+	for {
+		id, histogram, err := reader.Read()
+
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			t.Errorf("unexpected error decoding histogram: %s", err)
+			break
+		}
+
+		_, histExists := histMap[id]
+		if histExists {
+			t.Errorf("duplicate histogram found in stream: %s", id)
+		} else {
+			histMap[id] = histogram
+		}
+	}
+
+	if len(histMap) != len(expectedHistMap) {
+		t.Errorf(
+			"unexpected histogram count, wanted: %d, got: %d",
+			len(expectedHistMap),
+			len(histMap),
+		)
+	} else {
+		for key, hist := range histMap {
+			assertEqualHistograms(t, hist, expectedHistMap[key])
+		}
+	}
+}
+
 func assertEqualHistograms(
 	t *testing.T,
 	actual *Histogram,

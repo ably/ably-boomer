@@ -271,6 +271,7 @@ func percentileToSamples(totalSamples, numerator, denominator int64) int64 {
 // on a histogram. This allows us to serialize internal properties that
 // should be private.
 type serializedHistogram struct {
+	ID              string
 	BucketCount     int
 	Buckets         []int64
 	Min             int64
@@ -284,8 +285,9 @@ type serializedHistogram struct {
 }
 
 // coverts a histogram to a serialized histogram
-func newSerializedHistogram(h *Histogram) *serializedHistogram {
+func newSerializedHistogram(id string, h *Histogram) *serializedHistogram {
 	return &serializedHistogram{
+		ID:              id,
 		BucketCount:     h.bucketCount,
 		Buckets:         h.buckets,
 		Min:             h.min,
@@ -329,15 +331,15 @@ func NewHistogramReader(r io.Reader) *HistogramReader {
 
 // Read returns the next histogram in the histogram stream. The stream will
 // return the io.EOF error when the stream has ended.
-func (h *HistogramReader) Read() (*Histogram, error) {
+func (h *HistogramReader) Read() (string, *Histogram, error) {
 	var histogram serializedHistogram
 	err := h.decoder.Decode(&histogram)
 
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
-	return histogram.toHistogram(), nil
+	return histogram.ID, histogram.toHistogram(), nil
 }
 
 // HistogramWriter provides a writer for a stream of histograms
@@ -353,9 +355,9 @@ func NewHistogramWriter(w io.Writer) *HistogramWriter {
 }
 
 // Write encodes the provided histogram to the underlying io.Writer
-func (h *HistogramWriter) Write(histogram *Histogram) error {
+func (h *HistogramWriter) Write(id string, histogram *Histogram) error {
 	if histogram == nil {
 		return fmt.Errorf("cannot encode nil histogram")
 	}
-	return h.encoder.Encode(newSerializedHistogram(histogram))
+	return h.encoder.Encode(newSerializedHistogram(id, histogram))
 }
