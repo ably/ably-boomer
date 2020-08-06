@@ -45,30 +45,31 @@ type Histogram struct {
 // value is 17, all percentile values will be capped to 17 as this is a better
 // upper limit than the bucket max value of 20.
 type Percentiles struct {
-	Min     int64
-	Pct5    int64
-	Pct10   int64
-	Pct15   int64
-	Pct20   int64
-	Pct25   int64
-	Pct30   int64
-	Pct35   int64
-	Pct40   int64
-	Pct45   int64
-	Pct50   int64
-	Pct55   int64
-	Pct60   int64
-	Pct65   int64
-	Pct70   int64
-	Pct75   int64
-	Pct80   int64
-	Pct85   int64
-	Pct90   int64
-	Pct95   int64
-	Pct99   int64
-	Pct999  int64
-	Pct9999 int64
-	Max     int64
+	Min          int64
+	Pct5         int64
+	Pct10        int64
+	Pct15        int64
+	Pct20        int64
+	Pct25        int64
+	Pct30        int64
+	Pct35        int64
+	Pct40        int64
+	Pct45        int64
+	Pct50        int64
+	Pct55        int64
+	Pct60        int64
+	Pct65        int64
+	Pct70        int64
+	Pct75        int64
+	Pct80        int64
+	Pct85        int64
+	Pct90        int64
+	Pct95        int64
+	Pct99        int64
+	Pct999       int64
+	Pct9999      int64
+	Max          int64
+	TotalSamples int64
 }
 
 // NewDefaultHistogram returns  a histogram of 1ms to 60000ms, spaced 1ms apart
@@ -191,30 +192,31 @@ func (h *Histogram) Percentiles() *Percentiles {
 	}
 
 	return &Percentiles{
-		Min:     h.sampleMin,
-		Pct5:    h.bucketToMaxValue(btos[0]),
-		Pct10:   h.bucketToMaxValue(btos[1]),
-		Pct15:   h.bucketToMaxValue(btos[2]),
-		Pct20:   h.bucketToMaxValue(btos[3]),
-		Pct25:   h.bucketToMaxValue(btos[4]),
-		Pct30:   h.bucketToMaxValue(btos[5]),
-		Pct35:   h.bucketToMaxValue(btos[6]),
-		Pct40:   h.bucketToMaxValue(btos[7]),
-		Pct45:   h.bucketToMaxValue(btos[8]),
-		Pct50:   h.bucketToMaxValue(btos[9]),
-		Pct55:   h.bucketToMaxValue(btos[10]),
-		Pct60:   h.bucketToMaxValue(btos[11]),
-		Pct65:   h.bucketToMaxValue(btos[12]),
-		Pct70:   h.bucketToMaxValue(btos[13]),
-		Pct75:   h.bucketToMaxValue(btos[14]),
-		Pct80:   h.bucketToMaxValue(btos[15]),
-		Pct85:   h.bucketToMaxValue(btos[16]),
-		Pct90:   h.bucketToMaxValue(btos[17]),
-		Pct95:   h.bucketToMaxValue(btos[18]),
-		Pct99:   h.bucketToMaxValue(btos[19]),
-		Pct999:  h.bucketToMaxValue(btos[20]),
-		Pct9999: h.bucketToMaxValue(btos[21]),
-		Max:     h.sampleMax,
+		Min:          h.sampleMin,
+		Pct5:         h.bucketToMaxValue(btos[0]),
+		Pct10:        h.bucketToMaxValue(btos[1]),
+		Pct15:        h.bucketToMaxValue(btos[2]),
+		Pct20:        h.bucketToMaxValue(btos[3]),
+		Pct25:        h.bucketToMaxValue(btos[4]),
+		Pct30:        h.bucketToMaxValue(btos[5]),
+		Pct35:        h.bucketToMaxValue(btos[6]),
+		Pct40:        h.bucketToMaxValue(btos[7]),
+		Pct45:        h.bucketToMaxValue(btos[8]),
+		Pct50:        h.bucketToMaxValue(btos[9]),
+		Pct55:        h.bucketToMaxValue(btos[10]),
+		Pct60:        h.bucketToMaxValue(btos[11]),
+		Pct65:        h.bucketToMaxValue(btos[12]),
+		Pct70:        h.bucketToMaxValue(btos[13]),
+		Pct75:        h.bucketToMaxValue(btos[14]),
+		Pct80:        h.bucketToMaxValue(btos[15]),
+		Pct85:        h.bucketToMaxValue(btos[16]),
+		Pct90:        h.bucketToMaxValue(btos[17]),
+		Pct95:        h.bucketToMaxValue(btos[18]),
+		Pct99:        h.bucketToMaxValue(btos[19]),
+		Pct999:       h.bucketToMaxValue(btos[20]),
+		Pct9999:      h.bucketToMaxValue(btos[21]),
+		Max:          h.sampleMax,
+		TotalSamples: h.totalSamples,
 	}
 }
 

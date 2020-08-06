@@ -45,6 +45,7 @@ func TestNewHistogram(t *testing.T) {
 			59941,
 			59995,
 			60001,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -85,6 +86,7 @@ func TestNewHistogram(t *testing.T) {
 			59945,
 			59995,
 			60001,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -124,7 +126,7 @@ func TestNewHistogram(t *testing.T) {
 			0,
 			0,
 			0,
-			0,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -164,7 +166,7 @@ func TestNewHistogram(t *testing.T) {
 			120002,
 			120002,
 			120002,
-			120002,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -216,6 +218,7 @@ func TestNewHistogram(t *testing.T) {
 			59945,
 			59994,
 			59994,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -255,6 +258,7 @@ func TestNewHistogram(t *testing.T) {
 			-6,
 			-6,
 			-6,
+			2,
 		})
 
 		percentiles := hist.Percentiles()
@@ -294,6 +298,7 @@ func TestNewHistogram(t *testing.T) {
 			-60,
 			-6,
 			0,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -333,6 +338,7 @@ func TestNewHistogram(t *testing.T) {
 			59945,
 			59995,
 			60001,
+			60002,
 		})
 
 		percentiles := hist.Percentiles()
@@ -383,6 +389,7 @@ func TestNewHistogramSimulation(t *testing.T) {
 			sampleLog[percentileToSamples(samples, 999, 1000)],
 			sampleLog[percentileToSamples(samples, 9999, 10000)],
 			sampleLog[samples-1],
+			int64(len(sampleLog)),
 		})
 
 		percentiles := hist.Percentiles()
@@ -854,34 +861,44 @@ func assertEqualPercentiles(
 			actual.Max,
 		)
 	}
+
+	if actual.TotalSamples != expected.TotalSamples {
+		t.Errorf(
+			"unepxected percentile TotalSamples value, wanted: %d, got %d",
+			expected.TotalSamples,
+			actual.TotalSamples,
+		)
+	}
+
 }
 
 func percentilesFromArray(arr []int64) *Percentiles {
 	return &Percentiles{
-		Min:     arr[0],
-		Pct5:    arr[1],
-		Pct10:   arr[2],
-		Pct15:   arr[3],
-		Pct20:   arr[4],
-		Pct25:   arr[5],
-		Pct30:   arr[6],
-		Pct35:   arr[7],
-		Pct40:   arr[8],
-		Pct45:   arr[9],
-		Pct50:   arr[10],
-		Pct55:   arr[11],
-		Pct60:   arr[12],
-		Pct65:   arr[13],
-		Pct70:   arr[14],
-		Pct75:   arr[15],
-		Pct80:   arr[16],
-		Pct85:   arr[17],
-		Pct90:   arr[18],
-		Pct95:   arr[19],
-		Pct99:   arr[20],
-		Pct999:  arr[21],
-		Pct9999: arr[22],
-		Max:     arr[23],
+		Min:          arr[0],
+		Pct5:         arr[1],
+		Pct10:        arr[2],
+		Pct15:        arr[3],
+		Pct20:        arr[4],
+		Pct25:        arr[5],
+		Pct30:        arr[6],
+		Pct35:        arr[7],
+		Pct40:        arr[8],
+		Pct45:        arr[9],
+		Pct50:        arr[10],
+		Pct55:        arr[11],
+		Pct60:        arr[12],
+		Pct65:        arr[13],
+		Pct70:        arr[14],
+		Pct75:        arr[15],
+		Pct80:        arr[16],
+		Pct85:        arr[17],
+		Pct90:        arr[18],
+		Pct95:        arr[19],
+		Pct99:        arr[20],
+		Pct999:       arr[21],
+		Pct9999:      arr[22],
+		Max:          arr[23],
+		TotalSamples: arr[24],
 	}
 
 }
