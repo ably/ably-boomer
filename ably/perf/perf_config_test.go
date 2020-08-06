@@ -56,10 +56,10 @@ func TestNewPerfConfig(t *testing.T) {
 
 	t.Run("all perf environment variables set", func(ts *testing.T) {
 		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR":     "/tmp",
-			"PERF_CPU_S3_BUCKET":       "ably-logs-dev",
-			"PERF_HISTOGRAM_DIR":       "/tmp/histogram",
-			"PERF_HISTOGRAM_S3_BUCKET": "ably-hist-dev",
+			"PERF_CPU_PROFILE_DIR":       "/tmp",
+			"PERF_CPU_PROFILE_S3_BUCKET": "ably-logs-dev",
+			"PERF_HISTOGRAM_DIR":         "/tmp/histogram",
+			"PERF_HISTOGRAM_S3_BUCKET":   "ably-hist-dev",
 		}
 
 		config, err := NewConfig(testEnv.LookupEnv)
@@ -75,11 +75,11 @@ func TestNewPerfConfig(t *testing.T) {
 			)
 		}
 
-		if config.CPUProfileS3Bucket != testEnv["PERF_CPU_S3_BUCKET"] {
+		if config.CPUProfileS3Bucket != testEnv["PERF_CPU_PROFILE_S3_BUCKET"] {
 			t.Errorf(
 				"CPUProfileS3Bucket was incorrect, got: %s, wanted: %s",
 				config.CPUProfileS3Bucket,
-				testEnv["PERF_CPU_S3_BUCKET"],
+				testEnv["PERF_CPU_PROFILE_S3_BUCKET"],
 			)
 		}
 

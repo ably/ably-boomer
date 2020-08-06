@@ -13,8 +13,8 @@ import (
 func TestPerfPProf(t *testing.T) {
 	t.Run("pprof works with sensible defaults", func(ts *testing.T) {
 		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
+			"PERF_CPU_PROFILE_DIR":       os.TempDir(),
+			"PERF_CPU_PROFILE_S3_BUCKET": "ably-logs-dev",
 		}
 
 		config, configErr := NewConfig(testEnv.LookupEnv)
@@ -203,10 +203,10 @@ func TestPerfPProf(t *testing.T) {
 			)
 		}
 
-		bucket, bucketSet := os.LookupEnv("PERF_CPU_S3_BUCKET")
+		bucket, bucketSet := os.LookupEnv("PERF_CPU_PROFILE_S3_BUCKET")
 		if bucketSet && bucket != "" {
 			ts.Fatalf(
-				"PERF_CPU_S3_BUCKET env is currently set: %s",
+				"PERF_CPU_PROFILE_S3_BUCKET env is currently set: %s",
 				bucket,
 			)
 		}
@@ -230,8 +230,8 @@ func TestPerfPProf(t *testing.T) {
 
 	t.Run("pprof defaults to real s3 client", func(ts *testing.T) {
 		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
+			"PERF_CPU_PROFILE_DIR":       os.TempDir(),
+			"PERF_CPU_PROFILE_S3_BUCKET": "ably-logs-dev",
 		}
 
 		config, configErr := NewConfig(testEnv.LookupEnv)

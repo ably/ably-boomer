@@ -32,7 +32,7 @@ func NewConfig(lookupEnv LookupEnvFunc) (*Config, error) {
 		config.CPUProfileDir = cpuProfile
 	}
 
-	cpuProfileS3, cpuProfileS3Exists := lookupEnv("PERF_CPU_S3_BUCKET")
+	cpuProfileS3, cpuProfileS3Exists := lookupEnv("PERF_CPU_PROFILE_S3_BUCKET")
 	if cpuProfileS3Exists {
 		config.CPUProfileS3Bucket = cpuProfileS3
 	}

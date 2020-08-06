@@ -71,7 +71,9 @@ The test can be configured to debug performance. Options are set through environ
 Variable | Description | Default | Required
 --- | --- | --- | ---
 `PERF_CPU_PROFILE_DIR` | The directorty path to write the pprof cpu profile | n/a | no
-`PERF_CPU_S3_BUCKET` | The name of the s3 bucket to upload pprof data to | n/a | no
+`PERF_CPU_PROFILE_S3_BUCKET` | The name of the s3 bucket to upload pprof data to | n/a | no
+`PERF_HISTOGRAM_DIR` | The directorty path to write the latency histogram data | n/a | no
+`PERF_HISTOGRAM_S3_BUCKET` | The name of the s3 bucket to upload latency histogram data to | n/a | no
 
 If uploading data to s3, the s3 client is configured through the default environment as per the
 [s3 client documentation](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
