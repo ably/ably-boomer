@@ -1,5 +1,11 @@
 package perf
 
+import (
+	"encoding/gob"
+	"fmt"
+	"io"
+)
+
 // Default histogram to [1,60000] milliseconds with 1ms buckets
 const _defaultMinTime = 1
 const _defaultBucketCount = 60000
@@ -259,4 +265,97 @@ func (h *Histogram) maxPossibleValue() int64 {
 // of 4 samples is 2 samples (where the percentile line runs between 2 and 3).
 func percentileToSamples(totalSamples, numerator, denominator int64) int64 {
 	return 1 + (((totalSamples * numerator) - 1) / denominator)
+}
+
+// serializedHistogram provides public serializable fields for all fields
+// on a histogram. This allows us to serialize internal properties that
+// should be private.
+type serializedHistogram struct {
+	BucketCount     int
+	Buckets         []int64
+	Min             int64
+	Max             int64
+	BucketWidth     int64
+	SampleMin       int64
+	SampleMax       int64
+	LowSampleCount  int64
+	HighSampleCount int64
+	TotalSamples    int64
+}
+
+// coverts a histogram to a serialized histogram
+func newSerializedHistogram(h *Histogram) *serializedHistogram {
+	return &serializedHistogram{
+		BucketCount:     h.bucketCount,
+		Buckets:         h.buckets,
+		Min:             h.min,
+		Max:             h.max,
+		BucketWidth:     h.bucketWidth,
+		SampleMin:       h.sampleMin,
+		SampleMax:       h.sampleMax,
+		LowSampleCount:  h.lowSampleCount,
+		HighSampleCount: h.highSampleCount,
+		TotalSamples:    h.totalSamples,
+	}
+}
+
+// converts a serialized histogram to a histogram
+func (s *serializedHistogram) toHistogram() *Histogram {
+	return &Histogram{
+		bucketCount:     s.BucketCount,
+		buckets:         s.Buckets,
+		min:             s.Min,
+		max:             s.Max,
+		bucketWidth:     s.BucketWidth,
+		sampleMin:       s.SampleMin,
+		sampleMax:       s.SampleMax,
+		lowSampleCount:  s.LowSampleCount,
+		highSampleCount: s.HighSampleCount,
+		totalSamples:    s.TotalSamples,
+	}
+}
+
+// HistogramReader provides a reader for a stream of encoded histograms
+type HistogramReader struct {
+	decoder *gob.Decoder
+}
+
+// NewHistogramReader creates a histogram reader from the provided io.Reader
+func NewHistogramReader(r io.Reader) *HistogramReader {
+	return &HistogramReader{
+		decoder: gob.NewDecoder(r),
+	}
+}
+
+// Read returns the next histogram in the histogram stream. The stream will
+// return the io.EOF error when the stream has ended.
+func (h *HistogramReader) Read() (*Histogram, error) {
+	var histogram serializedHistogram
+	err := h.decoder.Decode(&histogram)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return histogram.toHistogram(), nil
+}
+
+// HistogramWriter provides a writer for a stream of histograms
+type HistogramWriter struct {
+	encoder *gob.Encoder
+}
+
+// NewHistogramWriter creates a histogram writer from the provided io.Writer
+func NewHistogramWriter(w io.Writer) *HistogramWriter {
+	return &HistogramWriter{
+		encoder: gob.NewEncoder(w),
+	}
+}
+
+// Write encodes the provided histogram to the underlying io.Writer
+func (h *HistogramWriter) Write(histogram *Histogram) error {
+	if histogram == nil {
+		return fmt.Errorf("cannot encode nil histogram")
+	}
+	return h.encoder.Encode(newSerializedHistogram(histogram))
 }

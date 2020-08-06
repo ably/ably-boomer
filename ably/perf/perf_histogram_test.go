@@ -1,6 +1,8 @@
 package perf
 
 import (
+	"bytes"
+	"io"
 	"math/rand"
 	"sort"
 	"testing"
@@ -386,11 +388,201 @@ func TestNewHistogramSimulation(t *testing.T) {
 	})
 }
 
+func TestHistogramEncoding(t *testing.T) {
+	t.Run("Histogram encodes to binary", func(ts *testing.T) {
+		var buf bytes.Buffer
+		expectedHistogramCount := 10
+		origHistograms := make([]*Histogram, 0, expectedHistogramCount)
+
+		writer := NewHistogramWriter(&buf)
+		writeNilErr := writer.Write(nil)
+
+		if writeNilErr == nil {
+			ts.Errorf("expected writer.write(nil) to return error")
+		}
+
+		for i := 0; i < expectedHistogramCount; i++ {
+			histogram := NewDefaultHistogram()
+			origHistograms = append(origHistograms, histogram)
+
+			for i := 0; i <= 1000000; i++ {
+				histogram.Add(int64(rand.Intn(60001)))
+			}
+
+			writeErr := writer.Write(histogram)
+			if writeErr != nil {
+				ts.Errorf("unexpected error encoding histogram: %s", writeErr)
+			}
+		}
+
+		reader := NewHistogramReader(&buf)
+
+		histogramCount := 0
+		for {
+			histogram, err := reader.Read()
+
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				ts.Errorf("unexpected error decoding histogram: %s", err)
+				break
+			}
+
+			if histogramCount < expectedHistogramCount {
+				assertEqualHistograms(
+					ts,
+					histogram,
+					origHistograms[histogramCount],
+				)
+				assertEqualPercentiles(
+					ts,
+					histogram.Percentiles(),
+					origHistograms[histogramCount].Percentiles(),
+				)
+				histogramCount++
+			}
+		}
+
+		if histogramCount != expectedHistogramCount {
+			ts.Errorf(
+				"error reading histogram, wanted: %d, got: %d",
+				histogramCount,
+				expectedHistogramCount,
+			)
+		}
+	})
+}
+func assertEqualHistograms(
+	t *testing.T,
+	actual *Histogram,
+	expected *Histogram,
+) {
+	if actual == nil || expected == nil {
+		if actual == expected {
+			return
+		}
+
+		if actual == nil {
+			t.Errorf("expected non-nil histogram")
+		} else {
+			t.Errorf("expected nil histogram")
+		}
+
+		return
+	}
+
+	if actual.bucketCount != expected.bucketCount {
+		t.Errorf(
+			"unepxected histogram bucketCount value, wanted: %d, got %d",
+			expected.bucketCount,
+			actual.bucketCount,
+		)
+	}
+
+	if len(actual.buckets) != len(expected.buckets) {
+		t.Errorf(
+			"unpected histogram buckets length, wanted: %d, got %d",
+			len(expected.buckets),
+			len(actual.buckets),
+		)
+	} else {
+		for i, expectedCount := range expected.buckets {
+			if actual.buckets[i] != expectedCount {
+				t.Errorf(
+					"unexpected bucket %d sample count, wanted %d, got: %d",
+					i,
+					expectedCount,
+					actual.buckets[i],
+				)
+				break
+			}
+		}
+	}
+
+	if actual.min != expected.min {
+		t.Errorf(
+			"unepxected histogram min value, wanted: %d, got %d",
+			expected.min,
+			actual.min,
+		)
+	}
+
+	if actual.max != expected.max {
+		t.Errorf(
+			"unepxected histogram max value, wanted: %d, got %d",
+			expected.max,
+			actual.max,
+		)
+	}
+
+	if actual.bucketWidth != expected.bucketWidth {
+		t.Errorf(
+			"unepxected histogram bucketWidth value, wanted: %d, got %d",
+			expected.bucketWidth,
+			actual.bucketWidth,
+		)
+	}
+
+	if actual.sampleMin != expected.sampleMin {
+		t.Errorf(
+			"unepxected histogram bucketWidth value, wanted: %d, got %d",
+			expected.sampleMin,
+			actual.sampleMin,
+		)
+	}
+
+	if actual.sampleMax != expected.sampleMax {
+		t.Errorf(
+			"unepxected histogram sampleMax value, wanted: %d, got %d",
+			expected.sampleMax,
+			actual.sampleMax,
+		)
+	}
+
+	if actual.lowSampleCount != expected.lowSampleCount {
+		t.Errorf(
+			"unepxected histogram lowSampleCount value, wanted: %d, got %d",
+			expected.lowSampleCount,
+			actual.lowSampleCount,
+		)
+	}
+
+	if actual.highSampleCount != expected.highSampleCount {
+		t.Errorf(
+			"unepxected histogram highSampleCount value, wanted: %d, got %d",
+			expected.highSampleCount,
+			actual.highSampleCount,
+		)
+	}
+
+	if actual.totalSamples != expected.totalSamples {
+		t.Errorf(
+			"unepxected histogram totalSamples value, wanted: %d, got %d",
+			expected.totalSamples,
+			actual.totalSamples,
+		)
+	}
+}
+
 func assertEqualPercentiles(
 	t *testing.T,
 	actual *Percentiles,
 	expected *Percentiles,
 ) {
+	if actual == nil || expected == nil {
+		if actual == expected {
+			return
+		}
+
+		if actual == nil {
+			t.Errorf("expected non-nil percentile")
+		} else {
+			t.Errorf("expected nil percentile")
+		}
+
+		return
+	}
+
 	if actual.Min != expected.Min {
 		t.Errorf(
 			"unepxected percentile Max value, wanted: %d, got %d",
