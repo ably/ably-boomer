@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/ably/perf"
 	"github.com/ably/ably-go/ably"
 )
 
@@ -32,7 +33,7 @@ func randomDelay() {
 	time.Sleep(time.Duration(r) * time.Second)
 }
 
-func personalTask(testConfig TestConfig) {
+func personalTask(testConfig TestConfig, perf *perf.Reporter) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -51,7 +52,7 @@ func personalTask(testConfig TestConfig) {
 		default:
 			subClient, err := newAblyClient(testConfig)
 			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				perf.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
 			defer subClient.Close()
@@ -63,18 +64,18 @@ func personalTask(testConfig TestConfig) {
 
 			sub, err := channel.Subscribe()
 			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				perf.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
 			defer sub.Close()
 
-			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel)
+			go reportSubscriptionToLocust(ctx, perf, sub, subClient.Connection, errorChannel)
 		}
 	}
 
 	publishClient, err := newAblyClient(testConfig)
 	if err != nil {
-		boomer.RecordFailure("ably", "publish", 0, err.Error())
+		perf.RecordFailure("ably", "publish", 0, err.Error())
 		return
 	}
 	defer publishClient.Close()
@@ -108,9 +109,9 @@ func personalTask(testConfig TestConfig) {
 			_, err := channel.Publish(timePublished, data)
 
 			if err != nil {
-				boomer.RecordFailure("ably", "publish", 0, err.Error())
+				perf.RecordFailure("ably", "publish", 0, err.Error())
 			} else {
-				boomer.RecordSuccess("ably", "publish", 0, 0)
+				perf.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
 			cleanup()
@@ -119,7 +120,7 @@ func personalTask(testConfig TestConfig) {
 	}
 }
 
-func curryPersonalTask(testConfig TestConfig) func() {
+func curryPersonalTask(testConfig TestConfig, perf *perf.Reporter) func() {
 	log.Println("Test Type: Personal")
 	log.Println("Ably Env:", testConfig.Env)
 	log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
@@ -127,6 +128,6 @@ func curryPersonalTask(testConfig TestConfig) func() {
 	log.Println("Message Data Length:", testConfig.MessageDataLength, "characters")
 
 	return func() {
-		personalTask(testConfig)
+		personalTask(testConfig, perf)
 	}
 }

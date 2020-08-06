@@ -21,27 +21,45 @@ func TestNewPerfConfig(t *testing.T) {
 			t.Fatalf("failed to initialize perf config: %s", err)
 		}
 
-		if config.CPUProfileDir != defaultCPUProfileDir {
+		if config.CPUProfileDir != _defaultCPUProfileDir {
 			t.Errorf(
 				"CPUProfileDir was incorrect, got: %s, wanted: %s",
 				config.CPUProfileDir,
-				defaultCPUProfileDir,
+				_defaultCPUProfileDir,
 			)
 		}
 
-		if config.S3Bucket != defaultS3Bucket {
+		if config.CPUProfileS3Bucket != _defaultCPUProfileS3Bucket {
 			t.Errorf(
-				"S3Bucket was incorrect, got: %s, wanted: %s",
-				config.S3Bucket,
-				defaultS3Bucket,
+				"CPUProfileS3Bucket was incorrect, got: %s, wanted: %s",
+				config.CPUProfileS3Bucket,
+				_defaultCPUProfileS3Bucket,
+			)
+		}
+
+		if config.HistogramDir != _defaultHistogramDir {
+			t.Errorf(
+				"HistogramDir was incorrect, got: %s, wanted: %s",
+				config.HistogramDir,
+				_defaultHistogramDir,
+			)
+		}
+
+		if config.HistogramS3Bucket != _defaultHistogramS3Bucket {
+			t.Errorf(
+				"HistogramS3Bucket was incorrect, got: %s, wanted: %s",
+				config.HistogramS3Bucket,
+				_defaultHistogramS3Bucket,
 			)
 		}
 	})
 
 	t.Run("all perf environment variables set", func(ts *testing.T) {
 		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": "/tmp",
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
+			"PERF_CPU_PROFILE_DIR":     "/tmp",
+			"PERF_CPU_S3_BUCKET":       "ably-logs-dev",
+			"PERF_HISTOGRAM_DIR":       "/tmp/histogram",
+			"PERF_HISTOGRAM_S3_BUCKET": "ably-hist-dev",
 		}
 
 		config, err := NewConfig(testEnv.LookupEnv)
@@ -53,17 +71,32 @@ func TestNewPerfConfig(t *testing.T) {
 			t.Errorf(
 				"CPUProfileDir was incorrect, got: %s, wanted: %s",
 				config.CPUProfileDir,
-				defaultCPUProfileDir,
+				testEnv["PERF_CPU_PROFILE_DIR"],
 			)
 		}
 
-		if config.S3Bucket != testEnv["PERF_CPU_S3_BUCKET"] {
+		if config.CPUProfileS3Bucket != testEnv["PERF_CPU_S3_BUCKET"] {
 			t.Errorf(
-				"S3Bucket was incorrect, got: %s, wanted: %s",
-				config.S3Bucket,
-				defaultS3Bucket,
+				"CPUProfileS3Bucket was incorrect, got: %s, wanted: %s",
+				config.CPUProfileS3Bucket,
+				testEnv["PERF_CPU_S3_BUCKET"],
 			)
 		}
 
+		if config.HistogramDir != testEnv["PERF_HISTOGRAM_DIR"] {
+			t.Errorf(
+				"HistogramS3Dir was incorrect, got: %s, wanted: %s",
+				config.HistogramDir,
+				testEnv["PERF_HISTOGRAM_DIR"],
+			)
+		}
+
+		if config.HistogramS3Bucket != testEnv["PERF_HISTOGRAM_S3_BUCKET"] {
+			t.Errorf(
+				"HistogramS3Bucket was incorrect, got: %s, wanted: %s",
+				config.HistogramDir,
+				testEnv["PERF_HISTOGRAM_S3_BUCKET"],
+			)
+		}
 	})
 }

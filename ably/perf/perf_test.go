@@ -23,13 +23,13 @@ func TestNewPerf(t *testing.T) {
 
 		s3Client := &mockS3{}
 
-		perf := NewWithS3(config, s3Client)
+		perf := NewReporterWithS3(config, s3Client)
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
 			// Cleanup the pprof file if we can
-			if path.Ext(perf.fileName) == ".pprof" {
-				os.Remove(perf.fileName)
+			if path.Ext(perf.pprofFileName) == ".pprof" {
+				os.Remove(perf.pprofFileName)
 			}
 			if err != nil {
 				ts.Fatalf("error stopping perf: %s", err)
@@ -44,7 +44,7 @@ func TestNewPerf(t *testing.T) {
 		}
 
 		// Test that a cpuprofile was written to disk
-		fileExt := path.Ext(perf.fileName)
+		fileExt := path.Ext(perf.pprofFileName)
 		expectedFileExt := ".pprof"
 		if fileExt != expectedFileExt {
 			ts.Fatalf(
@@ -53,7 +53,7 @@ func TestNewPerf(t *testing.T) {
 				expectedFileExt,
 			)
 		}
-		pprofStat, pprofStatErr := os.Stat(perf.fileName)
+		pprofStat, pprofStatErr := os.Stat(perf.pprofFileName)
 		if pprofStatErr != nil {
 			ts.Fatalf(
 				"pprof file missing from disk: %s",
@@ -83,7 +83,10 @@ func TestNewPerf(t *testing.T) {
 
 		// S3 Key
 		key := s3Client.input.Key
-		expectedKey := path.Join(defaultKeyPrefix, path.Base(perf.fileName))
+		expectedKey := path.Join(
+			_defaultKeyPrefix,
+			path.Base(perf.pprofFileName),
+		)
 		if key == nil {
 			ts.Errorf("missing key in s3 client options")
 		} else if *key != expectedKey {
@@ -111,11 +114,11 @@ func TestNewPerf(t *testing.T) {
 		s3File, s3FileOk := s3Client.input.Body.(*os.File)
 		if !s3FileOk || s3File == nil {
 			ts.Errorf("missing file as s3 PutObject body")
-		} else if s3File.Name() != perf.fileName {
+		} else if s3File.Name() != perf.pprofFileName {
 			ts.Errorf(
 				"unexpected s3 file upload, got: %s, wanted: %s",
 				s3File.Name(),
-				perf.fileName,
+				perf.pprofFileName,
 			)
 		}
 
@@ -158,13 +161,13 @@ func TestNewPerf(t *testing.T) {
 
 		s3Client := &mockS3{}
 
-		perf := NewWithS3(config, s3Client)
+		perf := NewReporterWithS3(config, s3Client)
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
 			// Cleanup the pprof file if we can
-			if path.Ext(perf.fileName) == ".pprof" {
-				os.Remove(perf.fileName)
+			if path.Ext(perf.pprofFileName) == ".pprof" {
+				os.Remove(perf.pprofFileName)
 			}
 			if err != nil {
 				ts.Fatalf("error stopping perf: %s", err)
@@ -179,7 +182,7 @@ func TestNewPerf(t *testing.T) {
 		}
 
 		// Test that a cpuprofile was written to disk
-		fileExt := path.Ext(perf.fileName)
+		fileExt := path.Ext(perf.pprofFileName)
 		expectedFileExt := ".pprof"
 		if fileExt != expectedFileExt {
 			ts.Fatalf(
@@ -188,7 +191,7 @@ func TestNewPerf(t *testing.T) {
 				expectedFileExt,
 			)
 		}
-		pprofStat, pprofStatErr := os.Stat(perf.fileName)
+		pprofStat, pprofStatErr := os.Stat(perf.pprofFileName)
 		if pprofStatErr != nil {
 			ts.Fatalf(
 				"pprof file missing from disk: %s",
@@ -222,13 +225,13 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		perf := New()
+		perf := NewReporter()
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
 			// Cleanup the pprof file if we can
-			if path.Ext(perf.fileName) == ".pprof" {
-				os.Remove(perf.fileName)
+			if path.Ext(perf.pprofFileName) == ".pprof" {
+				os.Remove(perf.pprofFileName)
 			}
 			if err != nil {
 				ts.Fatalf("error stopping perf: %s", err)
@@ -243,7 +246,7 @@ func TestNewPerf(t *testing.T) {
 		}
 
 		// Test that a cpuprofile is not taken by default
-		if perf.fileName != "" {
+		if perf.pprofFileName != "" {
 			ts.Fatalf("expected no pprof file by default")
 		}
 	})
@@ -259,7 +262,7 @@ func TestNewPerf(t *testing.T) {
 			ts.Fatalf("failed to initialize perf config: %s", configErr)
 		}
 
-		perf := NewWithS3(config, nil)
+		perf := NewReporterWithS3(config, nil)
 
 		configuredS3Client, configuredS3ClientErr := perf.configuredS3Client()
 		if configuredS3ClientErr != nil {

@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/ably/perf"
 )
 
-func fanOutTask(testConfig TestConfig) {
+func fanOutTask(testConfig TestConfig, perf *perf.Reporter) {
 	client, err := newAblyClient(testConfig)
 
 	if err != nil {
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		perf.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
 	defer client.Close()
@@ -22,7 +23,7 @@ func fanOutTask(testConfig TestConfig) {
 
 	sub, err := channel.Subscribe()
 	if err != nil {
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		perf.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
 	defer sub.Close()
@@ -33,7 +34,7 @@ func fanOutTask(testConfig TestConfig) {
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	errorChannel := make(chan error)
-	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel)
+	go reportSubscriptionToLocust(ctx, perf, sub, client.Connection, errorChannel)
 
 	select {
 	case err := <-errorChannel:
@@ -46,13 +47,13 @@ func fanOutTask(testConfig TestConfig) {
 	}
 }
 
-func curryFanOutTask(testConfig TestConfig) func() {
+func curryFanOutTask(testConfig TestConfig, perf *perf.Reporter) func() {
 	log.Println("Test Type: FanOut")
 	log.Println("Ably Env:", testConfig.Env)
 	log.Println("Channel Name:", testConfig.ChannelName)
 
 	return func() {
-		fanOutTask(testConfig)
+		fanOutTask(testConfig, perf)
 	}
 }
 
