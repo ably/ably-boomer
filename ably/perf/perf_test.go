@@ -90,7 +90,7 @@ func TestPerfPProf(t *testing.T) {
 			)
 		}
 
-		// S3 ACL
+		/* S3 ACL
 		acl := s3Client.input.ACL
 		expectedACL := "authenticated-read"
 		if acl == nil {
@@ -101,7 +101,7 @@ func TestPerfPProf(t *testing.T) {
 				*acl,
 				expectedACL,
 			)
-		}
+		} */
 
 		// S3 Body
 		s3File, s3FileOk := s3Client.input.Body.(*os.File)
@@ -329,7 +329,7 @@ func TestPerfHistogram(t *testing.T) {
 			)
 		}
 
-		// S3 ACL
+		/* S3 ACL
 		acl := s3Client.input.ACL
 		expectedACL := "authenticated-read"
 		if acl == nil {
@@ -340,7 +340,7 @@ func TestPerfHistogram(t *testing.T) {
 				*acl,
 				expectedACL,
 			)
-		}
+		} */
 
 		// S3 Body
 		s3File, s3FileOk := s3Client.input.Body.(*os.File)
