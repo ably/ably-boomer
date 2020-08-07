@@ -7,14 +7,14 @@ import (
 	"github.com/ably/ably-boomer/ably/perf"
 )
 
-func taskFn(testConfig TestConfig) func() {
+func taskFn(testConfig TestConfig, locust perf.LocustReporter) func() {
 	switch testConfig.TestType {
 	case "fanout":
-		return curryFanOutTask(testConfig)
+		return curryFanOutTask(testConfig, locust)
 	case "personal":
-		return curryPersonalTask(testConfig)
+		return curryPersonalTask(testConfig, locust)
 	case "sharded":
-		return curryShardedTask(testConfig)
+		return curryShardedTask(testConfig, locust)
 	default:
 		panic("Unknown test type: '" + testConfig.TestType + "'")
 	}
@@ -22,9 +22,9 @@ func taskFn(testConfig TestConfig) func() {
 
 func main() {
 	testConfig := newTestConfig()
-	perf := perf.New()
+	perf := perf.NewDefaultReporter()
 
-	fn := taskFn(testConfig)
+	fn := taskFn(testConfig, perf)
 
 	task := &boomer.Task{
 		Name: testConfig.TestType,

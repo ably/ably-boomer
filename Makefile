@@ -37,4 +37,4 @@ test: fmt lint
 fmt:
 	go fmt ./ably/...
 
-.PHONY: image push build test fmt
+.PHONY: image push build cover lint test fmt

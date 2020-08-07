@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/ably/perf"
 	"github.com/ably/ably-go/ably"
 )
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
+func reportSubscriptionToLocust(ctx context.Context, l perf.LocustReporter, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
 	connectionStateChannel := make(chan ably.State)
 	conn.On(connectionStateChannel)
 
@@ -30,7 +30,7 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
 				timeDisconnected := millisecondTimestamp() - lastDisconnectTime
 
-				boomer.RecordSuccess("ably", "reconnect", timeDisconnected, 0)
+				l.RecordSuccess("ably", "reconnect", timeDisconnected, 0)
 			}
 		case <-ctx.Done():
 			return
@@ -44,14 +44,14 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			timePublished, err := strconv.ParseInt(msg.Name, 10, 64)
 
 			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				l.RecordFailure("ably", "subscribe", 0, err.Error())
 				break
 			}
 
 			timeElapsed := millisecondTimestamp() - timePublished
 			bytes := len(fmt.Sprint(msg.Data))
 
-			boomer.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
+			l.RecordSuccess("ably", "subscribe", timeElapsed, int64(bytes))
 		}
 	}
 }
