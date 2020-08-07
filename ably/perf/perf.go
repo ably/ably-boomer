@@ -384,7 +384,7 @@ func (p *Reporter) uploadToS3(
 	_, s3Err := s3Client.PutObject(&s3.PutObjectInput{
 		Bucket:        aws.String(bucket),
 		Key:           aws.String(key),
-		ACL:           aws.String("private"),
+		ACL:           aws.String("authenticated-read"),
 		Body:          file,
 		ContentLength: aws.Int64(size),
 		ContentType:   aws.String("application/octet-stream"),

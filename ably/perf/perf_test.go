@@ -92,7 +92,7 @@ func TestPerfPProf(t *testing.T) {
 
 		// S3 ACL
 		acl := s3Client.input.ACL
-		expectedACL := "private"
+		expectedACL := "authenticated-read"
 		if acl == nil {
 			ts.Errorf("missing s3 file ACL")
 		} else if *acl != expectedACL {
@@ -331,7 +331,7 @@ func TestPerfHistogram(t *testing.T) {
 
 		// S3 ACL
 		acl := s3Client.input.ACL
-		expectedACL := "private"
+		expectedACL := "authenticated-read"
 		if acl == nil {
 			ts.Errorf("missing s3 file ACL")
 		} else if *acl != expectedACL {
