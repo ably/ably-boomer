@@ -15,6 +15,8 @@ func taskFn(testConfig TestConfig) func() {
 		return curryPersonalTask(testConfig)
 	case "sharded":
 		return curryShardedTask(testConfig)
+	case "composite":
+		return curryCompositeTask(testConfig)
 	default:
 		panic("Unknown test type: '" + testConfig.TestType + "'")
 	}
