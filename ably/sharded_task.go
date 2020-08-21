@@ -14,7 +14,7 @@ func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
 }
 
-func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int) {
+func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int, errorChannel chan<- error) {
 	log.Println("Delaying publish to", channel.Name, "for", delay+testConfig.PublishInterval, "seconds")
 	time.Sleep(time.Duration(delay) * time.Second)
 
@@ -33,10 +33,14 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 
 			if err != nil {
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
+				errorChannel <- err
+				ticker.Stop()
+				return
 			} else {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
+			ticker.Stop()
 			return
 		}
 	}
@@ -45,6 +49,8 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 func shardedPublisherTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	errorChannel := make(chan error)
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -63,7 +69,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 
 		delay := i % testConfig.PublishInterval
 
-		go publishOnInterval(ctx, testConfig, channel, delay)
+		go publishOnInterval(ctx, testConfig, channel, delay, errorChannel)
 	}
 
 	<-ctx.Done()
