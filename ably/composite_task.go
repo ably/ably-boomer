@@ -3,17 +3,19 @@ package main
 import (
 	"context"
 	"log"
-	"strconv"
-	"time"
 	"math/rand"
+	"strconv"
+	"sync"
 
 	"github.com/ably-forks/boomer"
-	"github.com/ably/ably-go/ably"
 )
 
 func generateShardedChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
 }
+
+var compositeUserCounter int
+var compositeUserMutex sync.Mutex
 
 func compositeTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -23,78 +25,58 @@ func compositeTask(testConfig TestConfig) {
 
 	errorChannel := make(chan error)
 
-	clients := []ably.RealtimeClient{}
+	client, err := newAblyClient(testConfig)
+	defer client.Close()
+
+	if err != nil {
+		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		return
+	}
+
+	compositeUserMutex.Lock()
+	compositeUserCounter++
+	userNumber := compositeUserCounter
+	compositeUserMutex.Unlock()
+
+	shardedChannelName := generateShardedChannelName(testConfig, userNumber)
+
+	shardedChannel := client.Channels.Get(shardedChannelName)
+	defer shardedChannel.Close()
+
+	shardedSub, err := shardedChannel.Subscribe()
+	if err != nil {
+		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+		return
+	}
+
+	go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel)
+
+	personalChannelName := randomString(100)
+	personalChannel := client.Channels.Get(personalChannelName)
+	defer personalChannel.Close()
 
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
-		select {
-		case <-ctx.Done():
+		personalSub, err := personalChannel.Subscribe()
+		if err != nil {
+			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
-		default:
-			time.Sleep(100 * time.Millisecond)
-
-			client, err := newAblyClient(testConfig)
-			defer client.Close()
-
-			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-				return
-			}
-
-			clients = append(clients, *client)
-
-
-			shardedChannelName := generateShardedChannelName(testConfig, i)
-
-			shardedChannel := client.Channels.Get(shardedChannelName)
-			defer shardedChannel.Close()
-
-			log.Println("Subscribing to channel:", shardedChannelName)
-
-			shardedSub, err := shardedChannel.Subscribe()
-			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-				return
-			}
-
-			go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel)
-
-
-			personalChannelName := randomString(100)
-			personalChannel := client.Channels.Get(personalChannelName)
-			defer personalChannel.Close()
-
-			log.Println("Subscribing to channel:", personalChannelName)
-
-			personalSub, err := personalChannel.Subscribe()
-			if err != nil {
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-				return
-			}
-
-			go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel)
-
-			go publishOnInterval(ctx, testConfig, personalChannel, rand.Intn(testConfig.PublishInterval), errorChannel)
 		}
+
+		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel)
 	}
 
-	cleanup := func() {
-		for _, client := range clients {
-			client.Close()
-		}
-	}
+	go publishOnInterval(ctx, testConfig, personalChannel, rand.Intn(testConfig.PublishInterval), errorChannel)
 
-	for {
-		select {
-		case err := <-errorChannel:
-			log.Println(err)
-			cancel()
-			cleanup()
-			return
-		case <-ctx.Done():
-			cancel()
-			cleanup()
-			return
-		}
+	select {
+	case err := <-errorChannel:
+		log.Println(err)
+		cancel()
+		client.Close()
+		return
+	case <-ctx.Done():
+		cancel()
+		client.Close()
+		return
 	}
 }
 
@@ -102,9 +84,7 @@ func curryCompositeTask(testConfig TestConfig) func() {
 	log.Println("Test Type: Composite")
 	log.Println("Ably Env:", testConfig.Env)
 	log.Println("Number of Channels:", testConfig.NumChannels)
-	log.Println("Number of Subscriptions:", testConfig.NumSubscriptions)
 	log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
-	log.Println("Publisher:", testConfig.Publisher)
 
 	return func() {
 		compositeTask(testConfig)
