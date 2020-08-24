@@ -11,19 +11,13 @@ import (
 )
 
 func retryPublish(attempts int, sleep time.Duration, channel *ably.RealtimeChannel, data string) error {
-	isAttached := channel.State() == ably.StateChanAttached
+	timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
+	_, err := channel.Publish(timePublished, data)
 
-	var err error
-
-	if isAttached {
-		timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
-		_, err = channel.Publish(timePublished, data)
-	}
-
-	if err != nil || !isAttached {
+	if err != nil {
 		if attempts--; attempts > 0 {
 			time.Sleep(sleep)
-			return retry(attempts, sleep, channel, data)
+			return retryPublish(attempts, sleep, channel, data)
 		}
 		return err
 	}
@@ -93,9 +87,17 @@ func shardedPublisherTask(testConfig TestConfig) {
 		go publishOnInterval(ctx, testConfig, channel, delay, errorChannel)
 	}
 
-	<-ctx.Done()
-
-	client.Close()
+	select {
+	case err := <-errorChannel:
+		log.Println(err.Error())
+		cancel()
+		client.Close()
+		shardedPublisherTask(testConfig)
+	case <-ctx.Done():
+		cancel()
+		client.Close()
+		return
+	}
 }
 
 func shardedSubscriberTask(testConfig TestConfig) {
