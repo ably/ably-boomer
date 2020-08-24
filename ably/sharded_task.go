@@ -10,6 +10,26 @@ import (
 	"github.com/ably/ably-go/ably"
 )
 
+func retryPublish(attempts int, sleep time.Duration, channel *ably.RealtimeChannel, data string) error {
+	isAttached := channel.State() == ably.StateChanAttached
+
+	var err error
+
+	if isAttached {
+		timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
+		_, err = channel.Publish(timePublished, data)
+	}
+
+	if err != nil || !isAttached {
+		if attempts--; attempts > 0 {
+			time.Sleep(sleep)
+			return retry(attempts, sleep, channel, data)
+		}
+		return err
+	}
+	return nil
+}
+
 func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
 }
@@ -17,6 +37,8 @@ func generateChannelName(testConfig TestConfig, number int) string {
 func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int, errorChannel chan<- error) {
 	log.Println("Delaying publish to", channel.Name, "for", delay+testConfig.PublishInterval, "seconds")
 	time.Sleep(time.Duration(delay) * time.Second)
+
+	publishRetries := testConfig.PublishInterval / 2
 
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
@@ -27,9 +49,8 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 			log.Println("Publishing to:", channel.Name)
 
 			data := randomString(testConfig.MessageDataLength)
-			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
-			_, err := channel.Publish(timePublished, data)
+			err := retryPublish(publishRetries, time.Second, channel, data)
 
 			if err != nil {
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
