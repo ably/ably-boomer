@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"time"
+	"sync"
 
 	"github.com/ably-forks/boomer"
 )
@@ -32,15 +33,21 @@ func fanOutTask(testConfig TestConfig) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	var wg sync.WaitGroup
 	errorChannel := make(chan error)
-	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel)
+
+	wg.Add(1)
+	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg)
 
 	select {
 	case err := <-errorChannel:
 		log.Println(err)
+		cancel()
+		wg.Wait()
 		client.Close()
 		return
 	case <-ctx.Done():
+		wg.Wait()
 		client.Close()
 		return
 	}

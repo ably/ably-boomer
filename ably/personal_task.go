@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"time"
+	"sync"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
@@ -38,6 +39,7 @@ func personalTask(testConfig TestConfig) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	var wg sync.WaitGroup
 	errorChannel := make(chan error)
 
 	channelName := randomString(channelNameLength)
@@ -68,7 +70,8 @@ func personalTask(testConfig TestConfig) {
 			}
 			defer sub.Close()
 
-			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel)
+			wg.Add(1)
+			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg)
 		}
 	}
 
@@ -99,6 +102,8 @@ func personalTask(testConfig TestConfig) {
 		select {
 		case err := <-errorChannel:
 			log.Println(err)
+			cancel()
+			wg.Wait()
 			cleanup()
 			return
 		case <-ticker.C:
@@ -113,6 +118,7 @@ func personalTask(testConfig TestConfig) {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
+			wg.Wait()
 			cleanup()
 			return
 		}
