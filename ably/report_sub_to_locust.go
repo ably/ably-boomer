@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
+	"log"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
 )
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error, wg *sync.WaitGroup) {
+
 	connectionStateChannel := make(chan ably.State)
 	conn.On(connectionStateChannel)
 
@@ -20,10 +23,13 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 		select {
 		case connState, ok := <-connectionStateChannel:
 			if !ok {
+				log.Println("Connection State Error - Channel Closed")
 				err := errors.New("Connection State Channel Closed")
 				errorChannel <- err
 				continue
 			}
+
+			log.Println("Connection State Change -", connState.State)
 
 			if connState.State == ably.StateConnDisconnected {
 				lastDisconnectTime = millisecondTimestamp()
@@ -33,9 +39,11 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 				boomer.RecordSuccess("ably", "reconnect", timeDisconnected, 0)
 			}
 		case <-ctx.Done():
+			wg.Done()
 			return
 		case msg, ok := <-sub.MessageChannel():
 			if !ok {
+				log.Println("Sub Message Error - Channel Closed")
 				err := errors.New("Sub Message Channel Closed")
 				errorChannel <- err
 				continue

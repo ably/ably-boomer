@@ -23,12 +23,14 @@ func compositeTask(testConfig TestConfig) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	var wg sync.WaitGroup
 	errorChannel := make(chan error)
 
 	client, err := newAblyClient(testConfig)
 	defer client.Close()
 
 	if err != nil {
+		log.Println("Subscribe Error - " + err.Error())
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
@@ -45,11 +47,13 @@ func compositeTask(testConfig TestConfig) {
 
 	shardedSub, err := shardedChannel.Subscribe()
 	if err != nil {
+		log.Println("Subscribe Error - " + err.Error())
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
 
-	go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel)
+	wg.Add(1)
+	go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel, &wg)
 
 	personalChannelName := randomString(100)
 	personalChannel := client.Channels.Get(personalChannelName)
@@ -58,23 +62,27 @@ func compositeTask(testConfig TestConfig) {
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
 		personalSub, err := personalChannel.Subscribe()
 		if err != nil {
+			log.Println("Subscribe Error - " + err.Error())
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
 		}
 
-		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel)
+		wg.Add(1)
+		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg)
 	}
 
-	go publishOnInterval(ctx, testConfig, personalChannel, rand.Intn(testConfig.PublishInterval), errorChannel)
+	wg.Add(1)
+	go publishOnInterval(ctx, testConfig, personalChannel, rand.Intn(testConfig.PublishInterval), errorChannel, &wg)
 
 	select {
 	case err := <-errorChannel:
 		log.Println(err)
 		cancel()
+		wg.Wait()
 		client.Close()
 		return
 	case <-ctx.Done():
-		cancel()
+		wg.Wait()
 		client.Close()
 		return
 	}

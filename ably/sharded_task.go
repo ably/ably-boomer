@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"sync"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
@@ -28,7 +29,7 @@ func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
 }
 
-func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int, errorChannel chan<- error) {
+func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int, errorChannel chan<- error, wg *sync.WaitGroup) {
 	log.Println("Delaying publish to", channel.Name, "for", delay+testConfig.PublishInterval, "seconds")
 	time.Sleep(time.Duration(delay) * time.Second)
 
@@ -47,15 +48,18 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 			err := retryPublish(publishRetries, time.Second, channel, data)
 
 			if err != nil {
+				log.Println("Publish Error - " + err.Error())
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
 				errorChannel <- err
 				ticker.Stop()
+				wg.Done()
 				return
 			} else {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
 			ticker.Stop()
+			wg.Done()
 			return
 		}
 	}
@@ -66,6 +70,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 	defer cancel()
 
 	errorChannel := make(chan error)
+	var wg sync.WaitGroup
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -84,7 +89,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 
 		delay := i % testConfig.PublishInterval
 
-		go publishOnInterval(ctx, testConfig, channel, delay, errorChannel)
+		go publishOnInterval(ctx, testConfig, channel, delay, errorChannel, &wg)
 	}
 
 	select {
@@ -105,6 +110,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	errorChannel := make(chan error)
+	var wg sync.WaitGroup
 
 	clients := []ably.RealtimeClient{}
 
@@ -136,7 +142,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 			}
 			defer sub.Close()
 
-			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel)
+			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg)
 		}
 	}
 
