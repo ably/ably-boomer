@@ -1,3 +1,4 @@
+DOCKER_IMAGE_REPO=ablyrealtime/ably-boomer
 DOCKER_IMAGE_TAG=latest
 
 # install shared tools to local bin directory
@@ -13,10 +14,10 @@ $(BIN)/%: | $(BIN)
 $(BIN)/golint: PACKAGE=golang.org/x/lint/golint
 
 image:
-	DOCKER_BUILDKIT=1 docker build -t ablyrealtime/ably-boomer:$(DOCKER_IMAGE_TAG) .
+	DOCKER_BUILDKIT=1 docker build -t $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG) .
 
 push:
-	docker push ablyrealtime/ably-boomer:$(DOCKER_IMAGE_TAG)
+	docker push $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)
 
 build:
 	go vet ./ably
