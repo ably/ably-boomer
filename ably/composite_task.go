@@ -53,7 +53,7 @@ func compositeTask(testConfig TestConfig) {
 	}
 
 	wg.Add(1)
-	go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel, &wg)
+	go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel, &wg, log.New("channel", shardedChannelName))
 
 	personalChannelName := randomString(100)
 	personalChannel := client.Channels.Get(personalChannelName)
@@ -70,7 +70,7 @@ func compositeTask(testConfig TestConfig) {
 		}
 
 		wg.Add(1)
-		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg)
+		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg, log.New("channel", personalChannelName))
 	}
 
 	log.Info("creating personal publisher", "channel", personalChannelName)
