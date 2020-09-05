@@ -4,8 +4,8 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/ably-forks/boomer v0.0.0-20200717132144-47e73943070d h1:QY6ZWqnlr3G0SKeG8y2Ul5WAzRSCQMT4M8RFjLlJj0k=
 github.com/ably-forks/boomer v0.0.0-20200717132144-47e73943070d/go.mod h1:POyhXMPpQaokNoe7GHQOmMhOHKWnY4B3FLePMSxsQEQ=
-github.com/ably/ably-go v1.1.6-0.20200824141310-49d7069ca624 h1:DRUh2RW6hKO47kfb1ks7HlU6qrktsF+0LLymre4Xjl8=
-github.com/ably/ably-go v1.1.6-0.20200824141310-49d7069ca624/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
+github.com/ably/ably-go v1.1.6-0.20200905151113-60928e378b37 h1:ULW1VSE/OFgNXqtih+m9tv/pXLc27Uw0M7LQA33+kQY=
+github.com/ably/ably-go v1.1.6-0.20200905151113-60928e378b37/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/andybalholm/brotli v1.0.0/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 h1:LHEOGCi+2CooiWkQB2BlzdMVh6rdRDyt5Wflv4yzvXY=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3/go.mod h1:JS7hed4L1fj0hXcyEejnW57/7LCetXggd+vwrRnYeII=
