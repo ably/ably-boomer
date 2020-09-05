@@ -27,13 +27,12 @@ func compositeTask(testConfig TestConfig) {
 	errorChannel := make(chan error)
 
 	client, err := newAblyClient(testConfig)
-	defer client.Close()
-
 	if err != nil {
 		log.Println("Subscribe Error - " + err.Error())
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
+	defer client.Close()
 
 	compositeUserMutex.Lock()
 	compositeUserCounter++
