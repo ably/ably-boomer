@@ -154,7 +154,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 			}
 			defer sub.Close()
 
-			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg)
+			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg, log.New("channel", channelName))
 		}
 	}
 

@@ -39,7 +39,7 @@ func fanOutTask(testConfig TestConfig) {
 	errorChannel := make(chan error)
 
 	wg.Add(1)
-	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg)
+	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg, log.New("channel", testConfig.ChannelName))
 
 	select {
 	case err := <-errorChannel:

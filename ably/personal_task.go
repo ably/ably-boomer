@@ -77,7 +77,7 @@ func personalTask(testConfig TestConfig) {
 			defer sub.Close()
 
 			wg.Add(1)
-			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg)
+			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg, log.New("channel", channelName))
 		}
 	}
 
