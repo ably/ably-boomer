@@ -1,11 +1,14 @@
 package main
 
 import (
-	"log"
+	"os"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/ably/perf"
+	"github.com/inconshreveable/log15"
 )
+
+var log = log15.New()
 
 func taskFn(testConfig TestConfig) func() {
 	switch testConfig.TestType {
@@ -23,21 +26,22 @@ func taskFn(testConfig TestConfig) func() {
 }
 
 func main() {
-	testConfig := newTestConfig()
-	perf := perf.New()
-
-	fn := taskFn(testConfig)
+	log.Info("initialising ably-boomer")
+	conf := newTestConfig()
 
 	task := &boomer.Task{
-		Name: testConfig.TestType,
-		Fn:   fn,
+		Name: conf.TestType,
+		Fn:   taskFn(conf),
 	}
 
-	perfError := perf.Start()
-	if perfError != nil {
-		log.Fatalf("errror starting perf: %s", perfError)
+	log.Info("starting perf")
+	perf := perf.New()
+	if err := perf.Start(); err != nil {
+		log.Crit("error starting perf", "err", err)
+		os.Exit(1)
 	}
 	defer perf.Stop()
 
+	log.Info("running ably-boomer", "test-type", conf.TestType)
 	boomer.Run(task)
 }

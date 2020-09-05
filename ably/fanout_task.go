@@ -2,17 +2,17 @@ package main
 
 import (
 	"context"
-	"log"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/ably-forks/boomer"
 )
 
 func fanOutTask(testConfig TestConfig) {
+	log.Info("creating realtime connection")
 	client, err := newAblyClient(testConfig)
-
 	if err != nil {
+		log.Error("error creating realtime connection", "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
@@ -21,8 +21,10 @@ func fanOutTask(testConfig TestConfig) {
 	channel := client.Channels.Get(testConfig.ChannelName)
 	defer channel.Close()
 
+	log.Info("creating subscriber", "name", testConfig.ChannelName)
 	sub, err := channel.Subscribe()
 	if err != nil {
+		log.Error("error creating subscriber", "name", testConfig.ChannelName, "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
@@ -41,12 +43,13 @@ func fanOutTask(testConfig TestConfig) {
 
 	select {
 	case err := <-errorChannel:
-		log.Println(err)
+		log.Error("error from subscriber goroutine", "err", err)
 		cancel()
 		wg.Wait()
 		client.Close()
 		return
 	case <-ctx.Done():
+		log.Info("fanout task context done, cleaning up")
 		wg.Wait()
 		client.Close()
 		return
@@ -54,9 +57,11 @@ func fanOutTask(testConfig TestConfig) {
 }
 
 func curryFanOutTask(testConfig TestConfig) func() {
-	log.Println("Test Type: FanOut")
-	log.Println("Ably Env:", testConfig.Env)
-	log.Println("Channel Name:", testConfig.ChannelName)
+	log.Info(
+		"starting fanout task",
+		"env", testConfig.Env,
+		"channel", testConfig.ChannelName,
+	)
 
 	return func() {
 		fanOutTask(testConfig)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -26,9 +25,10 @@ func compositeTask(testConfig TestConfig) {
 	var wg sync.WaitGroup
 	errorChannel := make(chan error)
 
+	log.Info("creating realtime connection")
 	client, err := newAblyClient(testConfig)
 	if err != nil {
-		log.Println("Subscribe Error - " + err.Error())
+		log.Error("error creating realtime connection", "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
@@ -44,9 +44,10 @@ func compositeTask(testConfig TestConfig) {
 	shardedChannel := client.Channels.Get(shardedChannelName)
 	defer shardedChannel.Close()
 
+	log.Info("creating sharded channel subscriber", "name", shardedChannelName)
 	shardedSub, err := shardedChannel.Subscribe()
 	if err != nil {
-		log.Println("Subscribe Error - " + err.Error())
+		log.Error("error creating sharded channel subscriber", "name", shardedChannelName, "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
@@ -58,10 +59,12 @@ func compositeTask(testConfig TestConfig) {
 	personalChannel := client.Channels.Get(personalChannelName)
 	defer personalChannel.Close()
 
+	log.Info("creating personal subscribers", "channel", personalChannelName, "count", testConfig.NumSubscriptions)
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
+		log.Info("creating personal subscriber", "num", i+1, "name", personalChannelName)
 		personalSub, err := personalChannel.Subscribe()
 		if err != nil {
-			log.Println("Subscribe Error - " + err.Error())
+			log.Error("error creating personal subscriber", "num", i+1, "name", personalChannelName, "err", err)
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
 		}
@@ -70,17 +73,19 @@ func compositeTask(testConfig TestConfig) {
 		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg)
 	}
 
+	log.Info("creating personal publisher", "channel", personalChannelName)
 	wg.Add(1)
 	go publishOnInterval(ctx, testConfig, personalChannel, rand.Intn(testConfig.PublishInterval), errorChannel, &wg)
 
 	select {
 	case err := <-errorChannel:
-		log.Println(err)
+		log.Error("error from subscriber or publisher goroutine", "err", err)
 		cancel()
 		wg.Wait()
 		client.Close()
 		return
 	case <-ctx.Done():
+		log.Info("composite task context done, cleaning up")
 		wg.Wait()
 		client.Close()
 		return
@@ -88,10 +93,13 @@ func compositeTask(testConfig TestConfig) {
 }
 
 func curryCompositeTask(testConfig TestConfig) func() {
-	log.Println("Test Type: Composite")
-	log.Println("Ably Env:", testConfig.Env)
-	log.Println("Number of Channels:", testConfig.NumChannels)
-	log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
+	log.Info(
+		"starting composite task",
+		"env", testConfig.Env,
+		"num-channels", testConfig.NumChannels,
+		"subs-per-channel", testConfig.NumSubscriptions,
+		"publish-interval", testConfig.PublishInterval,
+	)
 
 	return func() {
 		compositeTask(testConfig)

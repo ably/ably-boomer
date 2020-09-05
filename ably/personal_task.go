@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
 	"math/rand"
 	"strconv"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
@@ -30,7 +29,9 @@ func randomString(length int) string {
 
 func randomDelay() {
 	r := rand.Intn(60)
+	log.Info("introducing random delay", "seconds", r)
 	time.Sleep(time.Duration(r) * time.Second)
+	log.Info("continuing after random delay")
 }
 
 func personalTask(testConfig TestConfig) {
@@ -46,13 +47,16 @@ func personalTask(testConfig TestConfig) {
 
 	subClients := []ably.RealtimeClient{}
 
+	log.Info("creating subscribers", "channel", channelName, "count", testConfig.NumSubscriptions)
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
+			log.Info("creating subscriber realtime connection", "num", i+1)
 			subClient, err := newAblyClient(testConfig)
 			if err != nil {
+				log.Error("error creating subscriber realtime connection", "num", i+1, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
@@ -63,8 +67,10 @@ func personalTask(testConfig TestConfig) {
 			channel := subClient.Channels.Get(channelName)
 			defer channel.Close()
 
+			log.Info("creating subscriber", "num", i+1, "channel", channelName)
 			sub, err := channel.Subscribe()
 			if err != nil {
+				log.Error("error creating subscriber", "num", i+1, "channel", channelName, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
@@ -75,8 +81,10 @@ func personalTask(testConfig TestConfig) {
 		}
 	}
 
+	log.Info("creating publisher realtime connection")
 	publishClient, err := newAblyClient(testConfig)
 	if err != nil {
+		log.Error("error creating publisher realtime connection", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
 		return
 	}
@@ -95,13 +103,14 @@ func personalTask(testConfig TestConfig) {
 
 	randomDelay()
 
+	log.Info("creating publisher", "channel", channelName, "period", testConfig.PublishInterval)
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case err := <-errorChannel:
-			log.Println(err)
+			log.Error("error from subscriber goroutine", "err", err)
 			cancel()
 			wg.Wait()
 			cleanup()
@@ -110,14 +119,17 @@ func personalTask(testConfig TestConfig) {
 			data := randomString(testConfig.MessageDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
+			log.Info("publishing message", "size", len(data))
 			_, err := channel.Publish(timePublished, data)
 
 			if err != nil {
+				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
 			} else {
 				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
 		case <-ctx.Done():
+			log.Info("personal task context done, cleaning up")
 			wg.Wait()
 			cleanup()
 			return
@@ -126,11 +138,13 @@ func personalTask(testConfig TestConfig) {
 }
 
 func curryPersonalTask(testConfig TestConfig) func() {
-	log.Println("Test Type: Personal")
-	log.Println("Ably Env:", testConfig.Env)
-	log.Println("Publish Interval:", testConfig.PublishInterval, "seconds")
-	log.Println("Subscriptions Per Channel:", testConfig.NumSubscriptions)
-	log.Println("Message Data Length:", testConfig.MessageDataLength, "characters")
+	log.Info(
+		"starting personal task",
+		"env", testConfig.Env,
+		"publish-interval", testConfig.PublishInterval,
+		"subs-per-channel", testConfig.NumSubscriptions,
+		"message-size", testConfig.MessageDataLength,
+	)
 
 	return func() {
 		personalTask(testConfig)
