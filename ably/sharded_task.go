@@ -8,24 +8,7 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
-	"github.com/inconshreveable/log15"
 )
-
-func retryPublish(attempts int, sleep time.Duration, channel *ably.RealtimeChannel, data string, log log15.Logger) error {
-	timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
-	_, err := channel.Publish(timePublished, data)
-
-	if err != nil {
-		if attempts--; attempts > 0 {
-			log.Error("error publishing message, will retry", "err", err, "retry-in", sleep)
-			time.Sleep(sleep)
-			log.Info("retrying failed message")
-			return retryPublish(attempts, sleep, channel, data, log)
-		}
-		return err
-	}
-	return nil
-}
 
 func generateChannelName(testConfig TestConfig, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
@@ -39,8 +22,6 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 	time.Sleep(time.Duration(delay) * time.Second)
 	log.Info("continuing after random delay")
 
-	publishRetries := testConfig.PublishInterval / 2
-
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
@@ -48,9 +29,10 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 		select {
 		case <-ticker.C:
 			data := randomString(testConfig.MessageDataLength)
+			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
-			err := retryPublish(publishRetries, time.Second, channel, data, log)
+			_, err := channel.Publish(timePublished, data)
 			if err != nil {
 				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
