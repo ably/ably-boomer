@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:experimental
 FROM golang:1.14.4-alpine3.12 AS builder
 
 WORKDIR /opt/ably
@@ -6,8 +7,10 @@ RUN apk add --no-cache --upgrade make gcc libc-dev
 
 COPY . .
 
-RUN make build
-
+RUN \
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go \
+    make build
 
 
 FROM alpine:3.12
