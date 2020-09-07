@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"regexp"
 
 	"github.com/ably-forks/boomer"
 )
@@ -15,6 +16,8 @@ func generateShardedChannelName(testConfig TestConfig, number int) string {
 
 var compositeUserCounter int
 var compositeUserMutex sync.Mutex
+
+var errorMsgTimestampRegex = regexp.MustCompile(`tamp=[0-9]+`)
 
 func compositeTask(testConfig TestConfig) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -29,7 +32,10 @@ func compositeTask(testConfig TestConfig) {
 	client, err := newAblyClient(testConfig)
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+
+		errMsg := errorMsgTimestampRegex.ReplaceAllString(err.Error(), "tamp=<timestamp>")
+
+		boomer.RecordFailure("ably", "subscribe", 0, errMsg)
 		return
 	}
 	defer client.Close()
@@ -48,7 +54,10 @@ func compositeTask(testConfig TestConfig) {
 	shardedSub, err := shardedChannel.Subscribe()
 	if err != nil {
 		log.Error("error creating sharded channel subscriber", "name", shardedChannelName, "err", err)
-		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+
+		errMsg := errorMsgTimestampRegex.ReplaceAllString(err.Error(), "tamp=<timestamp>")
+
+		boomer.RecordFailure("ably", "subscribe", 0, errMsg)
 		return
 	}
 
