@@ -20,10 +20,15 @@ type S3ObjectPutter interface {
 	PutObject(*s3.PutObjectInput) (*s3.PutObjectOutput, error)
 }
 
+type Conf struct {
+	CPUProfileDir string
+	S3Bucket      string
+}
+
 // Perf provides profiling and performance debugging instrumentation
 type Perf struct {
 	started   bool
-	config    *Config
+	conf      Conf
 	s3Client  S3ObjectPutter
 	pprofFile *os.File
 	fileName  string
@@ -33,15 +38,17 @@ type Perf struct {
 var replaceChars = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 
 // New creates a new instance of a Perf with defaults
-func New() *Perf {
-	return &Perf{}
+func New(conf Conf) *Perf {
+	return &Perf{
+		conf: conf,
+	}
 }
 
 // NewWithS3 creates a new instance of a Perf with defaults and a supplied S3
 // client override
-func NewWithS3(config *Config, s3Client S3ObjectPutter) *Perf {
+func NewWithS3(conf Conf, s3Client S3ObjectPutter) *Perf {
 	return &Perf{
-		config:   config,
+		conf:     conf,
 		s3Client: s3Client,
 	}
 }
@@ -53,17 +60,7 @@ func (p *Perf) Start() error {
 		return fmt.Errorf("perf is already started")
 	}
 
-	if p.config == nil {
-		perfConfig, perfConfigErr := NewConfig(os.LookupEnv)
-
-		if perfConfigErr != nil {
-			return perfConfigErr
-		}
-
-		p.config = perfConfig
-	}
-
-	if p.config.CPUProfileDir == "" {
+	if p.conf.CPUProfileDir == "" {
 		return nil
 	}
 
@@ -79,7 +76,7 @@ func (p *Perf) Start() error {
 		),
 		"_",
 	)
-	p.fileName = path.Join(p.config.CPUProfileDir, baseName)
+	p.fileName = path.Join(p.conf.CPUProfileDir, baseName)
 	f, fErr := os.Create(p.fileName)
 	if fErr != nil {
 		return fErr
@@ -113,7 +110,7 @@ func (p *Perf) Stop() error {
 		return fmt.Errorf("error closing pprof file: %s", closeErr)
 	}
 
-	if p.config.S3Bucket != "" {
+	if p.conf.S3Bucket != "" {
 		return p.uploadToS3(p.pprofFile.Name())
 	}
 
@@ -157,7 +154,7 @@ func (p *Perf) uploadToS3(fileName string) error {
 	size := fileInfo.Size()
 
 	_, s3Err := s3Client.PutObject(&s3.PutObjectInput{
-		Bucket:        aws.String(p.config.S3Bucket),
+		Bucket:        aws.String(p.conf.S3Bucket),
 		Key:           aws.String(key),
 		ACL:           aws.String("private"),
 		Body:          file,

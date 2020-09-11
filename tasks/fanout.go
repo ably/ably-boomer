@@ -1,4 +1,4 @@
-package main
+package tasks
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"github.com/ably-forks/boomer"
 )
 
-func fanOutTask(testConfig TestConfig) {
-	log.Info("creating realtime connection")
-	client, err := newAblyClient(testConfig)
+func fanOutTask(apiKey, env, channelName string) {
+	client, err := newAblyClient(apiKey, env)
+
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -18,7 +18,7 @@ func fanOutTask(testConfig TestConfig) {
 	}
 	defer client.Close()
 
-	channel := client.Channels.Get(testConfig.ChannelName)
+	channel := client.Channels.Get(channelName)
 	defer channel.Close()
 
 	log.Info("creating subscriber", "name", testConfig.ChannelName)
@@ -56,15 +56,13 @@ func fanOutTask(testConfig TestConfig) {
 	}
 }
 
-func curryFanOutTask(testConfig TestConfig) func() {
-	log.Info(
-		"starting fanout task",
-		"env", testConfig.Env,
-		"channel", testConfig.ChannelName,
-	)
+func CurryFanOutTask(apiKey, env, channelName string) func() {
+	log.Println("Test Type: FanOut")
+	log.Println("Ably Env:", env)
+	log.Println("Channel Name:", channelName)
 
 	return func() {
-		fanOutTask(testConfig)
+		fanOutTask(apiKey, env, channelName)
 	}
 }
 

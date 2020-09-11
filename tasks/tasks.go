@@ -1,18 +1,23 @@
-package main
+package tasks
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
-	"github.com/inconshreveable/log15"
 )
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error, wg *sync.WaitGroup, log log15.Logger) {
+func newAblyClient(apiKey, env string) (*ably.RealtimeClient, error) {
+	options := ably.NewClientOptions(apiKey)
+	options.Environment = env
+
+	return ably.NewRealtimeClient(options)
+}
+
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
 	connectionStateChannel := make(chan ably.State)
 	conn.On(connectionStateChannel)
 

@@ -11,19 +11,12 @@ import (
 
 func TestNewPerf(t *testing.T) {
 	t.Run("perf works with sensible defaults", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
-		}
-
 		s3Client := &mockS3{}
 
-		perf := NewWithS3(config, s3Client)
+		perf := NewWithS3(Conf{
+			CPUProfileDir: os.TempDir(),
+			S3Bucket:      "ably-logs-dev",
+		}, s3Client)
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
@@ -147,18 +140,11 @@ func TestNewPerf(t *testing.T) {
 	})
 
 	t.Run("perf does not write to s3 unless configured", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
-		}
-
 		s3Client := &mockS3{}
 
-		perf := NewWithS3(config, s3Client)
+		perf := NewWithS3(Conf{
+			CPUProfileDir: os.TempDir(),
+		}, s3Client)
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
@@ -222,7 +208,10 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		perf := New()
+		perf := New(Conf{
+			CPUProfileDir: profileDir,
+			S3Bucket:      bucket,
+		})
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
@@ -249,17 +238,10 @@ func TestNewPerf(t *testing.T) {
 	})
 
 	t.Run("perf defaults to real s3 client", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
-		}
-
-		perf := NewWithS3(config, nil)
+		perf := NewWithS3(Conf{
+			CPUProfileDir: os.TempDir(),
+			S3Bucket:      "ably-logs-dev",
+		}, nil)
 
 		configuredS3Client, configuredS3ClientErr := perf.configuredS3Client()
 		if configuredS3ClientErr != nil {
