@@ -8,7 +8,7 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/perf"
-	"github.com/ably/ably-boomer/tasks"
+	"github.com/ably/ably-boomer/tasks/ably"
 	"github.com/urfave/cli/v2"
 )
 
@@ -63,7 +63,7 @@ func taskFn(c *cli.Context) (func(), error) {
 		apiKey := c.String(apiKeyFlag.Name)
 		env := c.String(envFlag.Name)
 		channelName := c.String(channelNameFlag.Name)
-		return tasks.CurryFanOutTask(tasks.FanOutConf{
+		return ably.CurryFanOutTask(ably.FanOutConf{
 			APIKey:      apiKey,
 			Env:         env,
 			ChannelName: channelName,
@@ -74,7 +74,7 @@ func taskFn(c *cli.Context) (func(), error) {
 		publishInterval := c.Int(publishIntervalFlag.Name)
 		numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 		msgDataLength := c.Int(msgDataLengthFlag.Name)
-		return tasks.CurryPersonalTask(tasks.PersonalConf{
+		return ably.CurryPersonalTask(ably.PersonalConf{
 			APIKey:           apiKey,
 			Env:              env,
 			PublishInterval:  publishInterval,
@@ -89,7 +89,7 @@ func taskFn(c *cli.Context) (func(), error) {
 		msgDataLength := c.Int(msgDataLengthFlag.Name)
 		numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 		publisher := c.Bool(publisherFlag.Name)
-		return tasks.CurryShardedTask(tasks.ShardedConf{
+		return ably.CurryShardedTask(ably.ShardedConf{
 			APIKey:           apiKey,
 			Env:              env,
 			NumChannels:      numChannels,

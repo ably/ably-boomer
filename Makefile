@@ -13,29 +13,33 @@ $(BIN)/%: | $(BIN)
 
 $(BIN)/golint: PACKAGE=golang.org/x/lint/golint
 
+all: build
+
 image:
 	DOCKER_BUILDKIT=1 docker build -t $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG) .
 
 push:
 	docker push $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)
 
-build:
-	go vet ./ably
-	go build -o ably-boomer ./ably
+ably-boomer: ./ably-boomer
+
+build: ably-boomer
+	go vet ./cmd/ably-boomer
+	go build -o ably-boomer ./cmd/ably-boomer
 
 cover: lint
 	mkdir -p ./coverage
-	go test -covermode=atomic -coverprofile=coverage/coverage.out ./ably/...
+	go test -covermode=atomic -coverprofile=coverage/coverage.out ./...
 	go tool cover -html=./coverage/coverage.out -o=./coverage/coverage.html
 
 GOLINT = $(BIN)/golint
 lint: | $(GOLINT)
-	$(GOLINT) -set_exit_status ./ably/...
+	$(GOLINT) -set_exit_status ./...
 
 test: fmt lint
-	go test ./ably/...
+	go test ./...
 
 fmt:
-	go fmt ./ably/...
+	go fmt ./...
 
-.PHONY: image push build test fmt
+.PHONY: all image push build cover lint test fmt
