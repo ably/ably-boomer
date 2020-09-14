@@ -8,8 +8,14 @@ import (
 	"github.com/ably-forks/boomer"
 )
 
-func fanOutTask(apiKey, env, channelName string) {
-	client, err := newAblyClient(apiKey, env)
+type FanOutConf struct {
+	APIKey      string
+	Env         string
+	ChannelName string
+}
+
+func fanOutTask(conf FanOutConf) {
+	client, err := newAblyClient(conf.APIKey, conf.Env)
 
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
@@ -18,7 +24,7 @@ func fanOutTask(apiKey, env, channelName string) {
 	}
 	defer client.Close()
 
-	channel := client.Channels.Get(channelName)
+	channel := client.Channels.Get(conf.ChannelName)
 	defer channel.Close()
 
 	log.Info("creating subscriber", "name", testConfig.ChannelName)
@@ -56,13 +62,13 @@ func fanOutTask(apiKey, env, channelName string) {
 	}
 }
 
-func CurryFanOutTask(apiKey, env, channelName string) func() {
+func CurryFanOutTask(conf FanOutConf) func() {
 	log.Println("Test Type: FanOut")
-	log.Println("Ably Env:", env)
-	log.Println("Channel Name:", channelName)
+	log.Println("Ably Env:", conf.Env)
+	log.Println("Channel Name:", conf.ChannelName)
 
 	return func() {
-		fanOutTask(apiKey, env, channelName)
+		fanOutTask(conf)
 	}
 }
 

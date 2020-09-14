@@ -10,6 +10,16 @@ import (
 	"github.com/ably/ably-go/ably"
 )
 
+type ShardedConf struct {
+	APIKey           string
+	Env              string
+	NumChannels      int
+	PublishInterval  int
+	MsgDataLength    int
+	NumSubscriptions int
+	Publisher        bool
+}
+
 func generateChannelName(numChannels, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%numChannels)
 }
@@ -50,7 +60,7 @@ func publishOnInterval(ctx context.Context, publishInterval, msgDataLength int, 
 	}
 }
 
-func shardedPublisherTask(apiKey, env string, numChannels, publishInterval, msgDataLength int) {
+func shardedPublisherTask(conf ShardedConf) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -59,7 +69,7 @@ func shardedPublisherTask(apiKey, env string, numChannels, publishInterval, msgD
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
-	client, err := newAblyClient(apiKey, env)
+	client, err := newAblyClient(conf.APIKey, conf.Env)
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
@@ -67,15 +77,15 @@ func shardedPublisherTask(apiKey, env string, numChannels, publishInterval, msgD
 	}
 	defer client.Close()
 
-	for i := 0; i < numChannels; i++ {
-		channelName := generateChannelName(numChannels, i)
+	for i := 0; i < conf.NumChannels; i++ {
+		channelName := generateChannelName(conf.NumChannels, i)
 
 		channel := client.Channels.Get(channelName)
 		defer channel.Close()
 
-		delay := i % publishInterval
+		delay := i % conf.PublishInterval
 
-		go publishOnInterval(ctx, publishInterval, msgDataLength, channel, delay)
+		go publishOnInterval(ctx, conf.PublishInterval, conf.MsgDataLength, channel, delay)
 	}
 
 	select {
@@ -92,7 +102,7 @@ func shardedPublisherTask(apiKey, env string, numChannels, publishInterval, msgD
 	}
 }
 
-func shardedSubscriberTask(apiKey, env string, numSubscriptions, numChannels int) {
+func shardedSubscriberTask(conf ShardedConf) {
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -101,12 +111,12 @@ func shardedSubscriberTask(apiKey, env string, numSubscriptions, numChannels int
 
 	clients := []ably.RealtimeClient{}
 
-	for i := 0; i < numSubscriptions; i++ {
+	for i := 0; i < conf.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			client, err := newAblyClient(apiKey, env)
+			client, err := newAblyClient(conf.APIKey, conf.Env)
 			if err != nil {
 				log.Error("error creating realtime connection", "num", i+1, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -116,7 +126,7 @@ func shardedSubscriberTask(apiKey, env string, numSubscriptions, numChannels int
 
 			clients = append(clients, *client)
 
-			channelName := generateChannelName(numChannels, i)
+			channelName := generateChannelName(conf.NumChannels, i)
 
 			channel := client.Channels.Get(channelName)
 			defer channel.Close()
@@ -154,18 +164,18 @@ func shardedSubscriberTask(apiKey, env string, numSubscriptions, numChannels int
 	}
 }
 
-func CurryShardedTask(apiKey, env string, numChannels, publishInterval, msgDataLength, numSubscriptions int, publisher bool) func() {
+func CurryShardedTask(conf ShardedConf) func() {
 	log.Println("Test Type: Sharded")
-	log.Println("Ably Env:", env)
-	log.Println("Number of Channels:", numChannels)
-	log.Println("Number of Subscriptions:", numSubscriptions)
-	log.Println("Publisher:", publisher)
+	log.Println("Ably Env:", conf.Env)
+	log.Println("Number of Channels:", conf.NumChannels)
+	log.Println("Number of Subscriptions:", conf.NumSubscriptions)
+	log.Println("Publisher:", conf.Publisher)
 
-	if publisher {
-		log.Println("Publish Interval:", publishInterval, "seconds")
+	if conf.Publisher {
+		log.Println("Publish Interval:", conf.PublishInterval, "seconds")
 
 		return func() {
-			shardedPublisherTask(apiKey, env, numChannels, publishInterval, msgDataLength)
+			shardedPublisherTask(conf)
 		}
 	}
 
@@ -176,6 +186,6 @@ func CurryShardedTask(apiKey, env string, numChannels, publishInterval, msgDataL
 		"subs-per-channel", testConfig.NumSubscriptions,
 	)
 	return func() {
-		shardedSubscriberTask(apiKey, env, numSubscriptions, numChannels)
+		shardedSubscriberTask(conf)
 	}
 }

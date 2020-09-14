@@ -11,6 +11,14 @@ import (
 	"github.com/ably/ably-go/ably"
 )
 
+type PersonalConf struct {
+	APIKey           string
+	Env              string
+	PublishInterval  int
+	NumSubscriptions int
+	MsgDataLength    int
+}
+
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 const channelNameLength = 100
@@ -34,7 +42,7 @@ func randomDelay() {
 	log.Info("continuing after random delay")
 }
 
-func personalTask(apiKey, env string, publishInterval, numSubscriptions, msgDataLength int) {
+func personalTask(conf PersonalConf) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -47,12 +55,12 @@ func personalTask(apiKey, env string, publishInterval, numSubscriptions, msgData
 
 	subClients := []ably.RealtimeClient{}
 
-	for i := 0; i < numSubscriptions; i++ {
+	for i := 0; i < conf.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			subClient, err := newAblyClient(apiKey, env)
+			subClient, err := newAblyClient(conf.APIKey, conf.Env)
 			if err != nil {
 				log.Error("error creating subscriber realtime connection", "num", i+1, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -79,7 +87,7 @@ func personalTask(apiKey, env string, publishInterval, numSubscriptions, msgData
 		}
 	}
 
-	publishClient, err := newAblyClient(apiKey, env)
+	publishClient, err := newAblyClient(conf.APIKey, conf.Env)
 	if err != nil {
 		log.Error("error creating publisher realtime connection", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
@@ -100,7 +108,7 @@ func personalTask(apiKey, env string, publishInterval, numSubscriptions, msgData
 
 	randomDelay()
 
-	ticker := time.NewTicker(time.Duration(publishInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(conf.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -112,7 +120,7 @@ func personalTask(apiKey, env string, publishInterval, numSubscriptions, msgData
 			cleanup()
 			return
 		case <-ticker.C:
-			data := randomString(msgDataLength)
+			data := randomString(conf.MsgDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
@@ -133,14 +141,14 @@ func personalTask(apiKey, env string, publishInterval, numSubscriptions, msgData
 	}
 }
 
-func CurryPersonalTask(apiKey, env string, publishInterval, numSubscriptions, msgDataLength int) func() {
+func CurryPersonalTask(conf PersonalConf) func() {
 	log.Println("Test Type: Personal")
-	log.Println("Ably Env:", env)
-	log.Println("Publish Interval:", publishInterval, "seconds")
-	log.Println("Subscriptions Per Channel:", numSubscriptions)
-	log.Println("Message Data Length:", msgDataLength, "characters")
+	log.Println("Ably Env:", conf.Env)
+	log.Println("Publish Interval:", conf.PublishInterval, "seconds")
+	log.Println("Subscriptions Per Channel:", conf.NumSubscriptions)
+	log.Println("Message Data Length:", conf.MsgDataLength, "characters")
 
 	return func() {
-		personalTask(apiKey, env, publishInterval, numSubscriptions, msgDataLength)
+		personalTask(conf)
 	}
 }
