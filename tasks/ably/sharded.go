@@ -8,9 +8,11 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
+	"github.com/inconshreveable/log15"
 )
 
 type ShardedConf struct {
+	Logger           log15.Logger
 	APIKey           string
 	Env              string
 	NumChannels      int
@@ -24,8 +26,20 @@ func generateChannelName(numChannels, number int) string {
 	return "sharded-test-channel-" + strconv.Itoa(number%numChannels)
 }
 
-func publishOnInterval(ctx context.Context, publishInterval, msgDataLength int, channel *ably.RealtimeChannel, delay int) {
-	log.Println("Delaying publish to", channel.Name, "for", delay+publishInterval, "seconds")
+func publishOnInterval(
+	ctx context.Context,
+	publishInterval,
+	msgDataLength int,
+	channel *ably.RealtimeChannel,
+	delay int,
+	errorChannel chan<- error,
+	wg *sync.WaitGroup,
+	log log15.Logger,
+) {
+	log = log.New("channel", channel.Name)
+	log.Info("creating publisher", "period", publishInterval)
+
+	log.Info("introducing random delay before starting to publish", "seconds", delay)
 	time.Sleep(time.Duration(delay) * time.Second)
 	log.Info("continuing after random delay")
 
@@ -35,8 +49,6 @@ func publishOnInterval(ctx context.Context, publishInterval, msgDataLength int, 
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("Publishing to:", channel.Name)
-
 			data := randomString(msgDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
@@ -61,6 +73,7 @@ func publishOnInterval(ctx context.Context, publishInterval, msgDataLength int, 
 }
 
 func shardedPublisherTask(conf ShardedConf) {
+	log := conf.Logger
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -69,6 +82,7 @@ func shardedPublisherTask(conf ShardedConf) {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
+	log.Info("creating realtime connection")
 	client, err := newAblyClient(conf.APIKey, conf.Env)
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
@@ -77,6 +91,7 @@ func shardedPublisherTask(conf ShardedConf) {
 	}
 	defer client.Close()
 
+	log.Info("creating publishers", "count", conf.NumChannels)
 	for i := 0; i < conf.NumChannels; i++ {
 		channelName := generateChannelName(conf.NumChannels, i)
 
@@ -85,7 +100,8 @@ func shardedPublisherTask(conf ShardedConf) {
 
 		delay := i % conf.PublishInterval
 
-		go publishOnInterval(ctx, conf.PublishInterval, conf.MsgDataLength, channel, delay)
+		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
+		go publishOnInterval(ctx, conf.PublishInterval, conf.MsgDataLength, channel, delay, errorChannel, &wg, log)
 	}
 
 	select {
@@ -93,7 +109,7 @@ func shardedPublisherTask(conf ShardedConf) {
 		log.Error("error from publisher goroutine", "err", err)
 		cancel()
 		client.Close()
-		shardedPublisherTask(testConfig)
+		shardedPublisherTask(conf)
 	case <-ctx.Done():
 		log.Info("sharded publisher task context done, cleaning up")
 		cancel()
@@ -103,6 +119,7 @@ func shardedPublisherTask(conf ShardedConf) {
 }
 
 func shardedSubscriberTask(conf ShardedConf) {
+	log := conf.Logger
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -111,11 +128,13 @@ func shardedSubscriberTask(conf ShardedConf) {
 
 	clients := []ably.RealtimeClient{}
 
+	log.Info("creating subscribers", "count", conf.NumSubscriptions)
 	for i := 0; i < conf.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
+			log.Info("creating realtime connection", "num", i+1)
 			client, err := newAblyClient(conf.APIKey, conf.Env)
 			if err != nil {
 				log.Error("error creating realtime connection", "num", i+1, "err", err)
@@ -165,14 +184,16 @@ func shardedSubscriberTask(conf ShardedConf) {
 }
 
 func CurryShardedTask(conf ShardedConf) func() {
-	log.Println("Test Type: Sharded")
-	log.Println("Ably Env:", conf.Env)
-	log.Println("Number of Channels:", conf.NumChannels)
-	log.Println("Number of Subscriptions:", conf.NumSubscriptions)
-	log.Println("Publisher:", conf.Publisher)
+	log := conf.Logger
 
 	if conf.Publisher {
-		log.Println("Publish Interval:", conf.PublishInterval, "seconds")
+		log.Info(
+			"starting sharded publisher task",
+			"env", conf.Env,
+			"num-channels", conf.NumChannels,
+			"publish-interval", conf.PublishInterval,
+			"message-size", conf.MsgDataLength,
+		)
 
 		return func() {
 			shardedPublisherTask(conf)
@@ -181,9 +202,9 @@ func CurryShardedTask(conf ShardedConf) func() {
 
 	log.Info(
 		"starting sharded subscriber task",
-		"env", testConfig.Env,
-		"num-channels", testConfig.NumChannels,
-		"subs-per-channel", testConfig.NumSubscriptions,
+		"env", conf.Env,
+		"num-channels", conf.NumChannels,
+		"subs-per-channel", conf.NumSubscriptions,
 	)
 	return func() {
 		shardedSubscriberTask(conf)

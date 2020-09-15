@@ -1,5 +1,4 @@
 DOCKER_IMAGE_REPO=ablyrealtime/ably-boomer
-DOCKER_IMAGE_TAG=latest
 
 # install shared tools to local bin directory
 BIN = $(CURDIR)/bin

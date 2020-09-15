@@ -12,7 +12,6 @@ RUN \
     --mount=type=cache,target=/go \
     make build
 
-
 FROM alpine:3.12
 
 RUN addgroup -S ably && adduser -S ably -G ably

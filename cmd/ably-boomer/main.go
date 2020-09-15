@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/perf"
 	"github.com/ably/ably-boomer/tasks/ably"
+	"github.com/inconshreveable/log15"
 	"github.com/urfave/cli/v2"
 )
+
+var log = log15.New()
 
 func nameToEnvVars(name, prefix string) []string {
 	envVar := strings.ToUpper(name)
@@ -64,6 +66,7 @@ func taskFn(c *cli.Context) (func(), error) {
 		env := c.String(envFlag.Name)
 		channelName := c.String(channelNameFlag.Name)
 		return ably.CurryFanOutTask(ably.FanOutConf{
+			Logger:      log,
 			APIKey:      apiKey,
 			Env:         env,
 			ChannelName: channelName,
@@ -75,6 +78,7 @@ func taskFn(c *cli.Context) (func(), error) {
 		numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 		msgDataLength := c.Int(msgDataLengthFlag.Name)
 		return ably.CurryPersonalTask(ably.PersonalConf{
+			Logger:           log,
 			APIKey:           apiKey,
 			Env:              env,
 			PublishInterval:  publishInterval,
@@ -90,6 +94,7 @@ func taskFn(c *cli.Context) (func(), error) {
 		numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 		publisher := c.Bool(publisherFlag.Name)
 		return ably.CurryShardedTask(ably.ShardedConf{
+			Logger:           log,
 			APIKey:           apiKey,
 			Env:              env,
 			NumChannels:      numChannels,
@@ -97,6 +102,24 @@ func taskFn(c *cli.Context) (func(), error) {
 			MsgDataLength:    msgDataLength,
 			NumSubscriptions: numSubscriptions,
 			Publisher:        publisher,
+		}), nil
+	case "composite":
+		apiKey := c.String(apiKeyFlag.Name)
+		env := c.String(envFlag.Name)
+		channelName := c.String(channelNameFlag.Name)
+		numChannels := c.Int(numChannelsFlag.Name)
+		msgDataLength := c.Int(msgDataLengthFlag.Name)
+		numSubscriptions := c.Int(numSubscriptionsFlag.Name)
+		publishInterval := c.Int(publishIntervalFlag.Name)
+		return ably.CurryCompositeTask(ably.CompositeConf{
+			Logger:           log,
+			APIKey:           apiKey,
+			Env:              env,
+			ChannelName:      channelName,
+			NumChannels:      numChannels,
+			MsgDataLength:    msgDataLength,
+			NumSubscriptions: numSubscriptions,
+			PublishInterval:  publishInterval,
 		}), nil
 	default:
 		return nil, fmt.Errorf("unknown test type: %s", testType)
@@ -115,22 +138,26 @@ func run(c *cli.Context) error {
 		Fn:   fn,
 	}
 
+	log.Info("starting perf")
 	perf := perf.New(perf.Conf{
 		CPUProfileDir: c.Path(cpuProfileDirFlag.Name),
 		S3Bucket:      c.String(s3BucketFlag.Name),
 	})
-	err = perf.Start()
-	if err != nil {
-		return fmt.Errorf("error starting perf: %w", err)
+	if err = perf.Start(); err != nil {
+		log.Crit("error starting perf", "err", err)
+		os.Exit(1)
 	}
 	defer perf.Stop()
 
+	log.Info("running ably-boomer", "test-type", testType)
 	boomer.Run(task)
 
 	return nil
 }
 
 func main() {
+	log.Info("initialising ably-boomer")
+
 	ablyFlags := []cli.Flag{
 		testTypeFlag,
 		envFlag,
@@ -168,6 +195,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		log.Crit("fatal error", "err", err)
+		os.Exit(1)
 	}
 }

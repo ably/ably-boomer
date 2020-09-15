@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
+	"github.com/inconshreveable/log15"
 )
 
 func newAblyClient(apiKey, env string) (*ably.RealtimeClient, error) {
@@ -17,7 +19,14 @@ func newAblyClient(apiKey, env string) (*ably.RealtimeClient, error) {
 	return ably.NewRealtimeClient(options)
 }
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error) {
+func reportSubscriptionToLocust(
+	ctx context.Context,
+	sub *ably.Subscription,
+	conn *ably.Conn,
+	errorChannel chan<- error,
+	wg *sync.WaitGroup,
+	log log15.Logger,
+) {
 	connectionStateChannel := make(chan ably.State)
 	conn.On(connectionStateChannel)
 

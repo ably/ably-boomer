@@ -9,9 +9,11 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
+	"github.com/inconshreveable/log15"
 )
 
 type PersonalConf struct {
+	Logger           log15.Logger
 	APIKey           string
 	Env              string
 	PublishInterval  int
@@ -35,7 +37,7 @@ func randomString(length int) string {
 	return string(b)
 }
 
-func randomDelay() {
+func randomDelay(log log15.Logger) {
 	r := rand.Intn(60)
 	log.Info("introducing random delay", "seconds", r)
 	time.Sleep(time.Duration(r) * time.Second)
@@ -43,6 +45,7 @@ func randomDelay() {
 }
 
 func personalTask(conf PersonalConf) {
+	log := conf.Logger
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -55,11 +58,13 @@ func personalTask(conf PersonalConf) {
 
 	subClients := []ably.RealtimeClient{}
 
+	log.Info("creating subscribers", "channel", channelName, "count", conf.NumSubscriptions)
 	for i := 0; i < conf.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
+			log.Info("creating subscriber realtime connection", "num", i+1)
 			subClient, err := newAblyClient(conf.APIKey, conf.Env)
 			if err != nil {
 				log.Error("error creating subscriber realtime connection", "num", i+1, "err", err)
@@ -87,6 +92,7 @@ func personalTask(conf PersonalConf) {
 		}
 	}
 
+	log.Info("creating publisher realtime connection")
 	publishClient, err := newAblyClient(conf.APIKey, conf.Env)
 	if err != nil {
 		log.Error("error creating publisher realtime connection", "err", err)
@@ -106,8 +112,9 @@ func personalTask(conf PersonalConf) {
 		}
 	}
 
-	randomDelay()
+	randomDelay(log)
 
+	log.Info("creating publisher", "channel", channelName, "period", conf.PublishInterval)
 	ticker := time.NewTicker(time.Duration(conf.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
@@ -142,11 +149,14 @@ func personalTask(conf PersonalConf) {
 }
 
 func CurryPersonalTask(conf PersonalConf) func() {
-	log.Println("Test Type: Personal")
-	log.Println("Ably Env:", conf.Env)
-	log.Println("Publish Interval:", conf.PublishInterval, "seconds")
-	log.Println("Subscriptions Per Channel:", conf.NumSubscriptions)
-	log.Println("Message Data Length:", conf.MsgDataLength, "characters")
+	log := conf.Logger
+	log.Info(
+		"starting personal task",
+		"env", conf.Env,
+		"publish-interval", conf.PublishInterval,
+		"subs-per-channel", conf.NumSubscriptions,
+		"message-size", conf.MsgDataLength,
+	)
 
 	return func() {
 		personalTask(conf)
