@@ -11,6 +11,7 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
+// CompositeConf is the Composite task's configuration.
 type CompositeConf struct {
 	Logger           log15.Logger
 	APIKey           string
@@ -114,6 +115,7 @@ func compositeTask(conf CompositeConf) {
 	}
 }
 
+// CurryCompositeTask returns a function allowing to run the Composite task.
 func CurryCompositeTask(conf CompositeConf) func() {
 	log := conf.Logger
 	log.Info(

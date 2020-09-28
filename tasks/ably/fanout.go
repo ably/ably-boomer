@@ -9,6 +9,7 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
+// FanOutConf is the FanOut task's configuration.
 type FanOutConf struct {
 	Logger      log15.Logger
 	APIKey      string
@@ -65,6 +66,7 @@ func fanOutTask(conf FanOutConf) {
 	}
 }
 
+// CurryFanOutTask returns a function allowing to run the FanOut task.
 func CurryFanOutTask(conf FanOutConf) func() {
 	log := conf.Logger
 	log.Info(

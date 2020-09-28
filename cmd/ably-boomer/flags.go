@@ -3,7 +3,7 @@ package main
 import "github.com/urfave/cli/v2"
 
 var (
-	// Ably
+	// Ably.
 	testTypeFlag = &cli.StringFlag{
 		Name:  "test-type",
 		Usage: "The type of load test to run. Can be either fanout, personal, sharded or composite.",
@@ -46,7 +46,7 @@ var (
 		Usage: "The number of channels a worker could subscribe to. A channel will be chosen at random. Only used for sharded and composite type tests.",
 	}
 
-	// Perf
+	// Perf.
 	cpuProfileDirFlag = &cli.PathFlag{
 		Name:  "cpu-profile-dir",
 		Usage: "The directorty path to write the pprof cpu profile.",
@@ -56,7 +56,7 @@ var (
 		Usage: "The name of the s3 bucket to upload pprof data to.",
 	}
 
-	// AWS
+	// AWS.
 	regionFlag = &cli.StringFlag{
 		Name:  "region",
 		Usage: "The AWS region to use, i.e. us-west-2.",

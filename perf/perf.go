@@ -15,17 +15,18 @@ import (
 
 const defaultKeyPrefix = "perf"
 
-// S3ObjectPutter provides a PutObject function for writing to S3
+// S3ObjectPutter provides a PutObject function for writing to S3.
 type S3ObjectPutter interface {
 	PutObject(*s3.PutObjectInput) (*s3.PutObjectOutput, error)
 }
 
+// Conf represents Perf's configuration.
 type Conf struct {
 	CPUProfileDir string
 	S3Bucket      string
 }
 
-// Perf provides profiling and performance debugging instrumentation
+// Perf provides profiling and performance debugging instrumentation.
 type Perf struct {
 	started   bool
 	conf      Conf
@@ -34,10 +35,10 @@ type Perf struct {
 	fileName  string
 }
 
-// Only allow alphanumeric chars, - _ and . in file names
+// Only allow alphanumeric chars, - _ and . in file names.
 var replaceChars = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 
-// New creates a new instance of a Perf with defaults
+// New creates a new instance of a Perf with defaults.
 func New(conf Conf) *Perf {
 	return &Perf{
 		conf: conf,
@@ -45,7 +46,7 @@ func New(conf Conf) *Perf {
 }
 
 // NewWithS3 creates a new instance of a Perf with defaults and a supplied S3
-// client override
+// client override.
 func NewWithS3(conf Conf, s3Client S3ObjectPutter) *Perf {
 	return &Perf{
 		conf:     conf,
@@ -117,7 +118,7 @@ func (p *Perf) Stop() error {
 	return nil
 }
 
-// Returns either the configured s3 client or the default s3 client if unset
+// Returns either the configured s3 client or the default s3 client if unset.
 func (p *Perf) configuredS3Client() (S3ObjectPutter, error) {
 	if p.s3Client != nil {
 		return p.s3Client, nil
@@ -131,7 +132,7 @@ func (p *Perf) configuredS3Client() (S3ObjectPutter, error) {
 	return s3.New(sess), nil
 }
 
-// Uploads a file to the S3 perf bucket
+// Uploads a file to the S3 perf bucket.
 func (p *Perf) uploadToS3(fileName string) error {
 	s3Client, err := p.configuredS3Client()
 	if err != nil {
@@ -146,7 +147,7 @@ func (p *Perf) uploadToS3(fileName string) error {
 
 	key := path.Join(defaultKeyPrefix, path.Base(fileName))
 
-	// Get file size and read the file content into a buffer
+	// Get file size and read the file content into a buffer.
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return fmt.Errorf("error reading file stat: %s", err)

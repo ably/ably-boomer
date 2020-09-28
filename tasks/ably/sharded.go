@@ -11,6 +11,7 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
+// ShardedConf is the Sharded task's configuration.
 type ShardedConf struct {
 	Logger           log15.Logger
 	APIKey           string
@@ -61,9 +62,9 @@ func publishOnInterval(
 				ticker.Stop()
 				wg.Done()
 				return
-			} else {
-				boomer.RecordSuccess("ably", "publish", 0, 0)
 			}
+
+			boomer.RecordSuccess("ably", "publish", 0, 0)
 		case <-ctx.Done():
 			ticker.Stop()
 			wg.Done()
@@ -183,6 +184,7 @@ func shardedSubscriberTask(conf ShardedConf) {
 	}
 }
 
+// CurryShardedTask returns a function allowing to run the Sharded task.
 func CurryShardedTask(conf ShardedConf) func() {
 	log := conf.Logger
 

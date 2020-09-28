@@ -12,6 +12,7 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
+// PersonalConf is the Personal task's configuration.
 type PersonalConf struct {
 	Logger           log15.Logger
 	APIKey           string
@@ -148,6 +149,7 @@ func personalTask(conf PersonalConf) {
 	}
 }
 
+// CurryPersonalTask returns a function allowing to run the Personal task.
 func CurryPersonalTask(conf PersonalConf) func() {
 	log := conf.Logger
 	log.Info(
