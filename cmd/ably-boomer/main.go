@@ -14,46 +14,46 @@ import (
 
 var log = log15.New()
 
-func nameToEnvVars(name, prefix string) []string {
+func nameToEnvVarNames(name, prefix string) []string {
 	envVar := strings.ToUpper(name)
 	envVar = strings.ReplaceAll(envVar, "-", "_")
 	envVar = fmt.Sprintf("%s_%s", prefix, envVar)
 	return []string{envVar}
 }
 
-func generateEnvVars(prefix string, flags []cli.Flag) {
+func generateEnvVarNames(prefix string, flags []cli.Flag) {
 	for _, flag := range flags {
 		switch f := flag.(type) {
 		case *cli.BoolFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.DurationFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.Float64Flag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.Float64SliceFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.GenericFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.Int64Flag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.Int64SliceFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.IntFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.IntSliceFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.PathFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.StringFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.StringSliceFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.TimestampFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.Uint64Flag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		case *cli.UintFlag:
-			f.EnvVars = nameToEnvVars(f.Name, prefix)
+			f.EnvVars = nameToEnvVarNames(f.Name, prefix)
 		}
 	}
 }
@@ -182,9 +182,9 @@ func main() {
 		sessionTokenFlag,
 	}
 
-	generateEnvVars("ABLY", ablyFlags)
-	generateEnvVars("PERF", perfFlags)
-	generateEnvVars("AWS", awsFlags)
+	generateEnvVarNames("ABLY", ablyFlags)
+	generateEnvVarNames("PERF", perfFlags)
+	generateEnvVarNames("AWS", awsFlags)
 
 	app := &cli.App{
 		Flags:  append(append(ablyFlags, perfFlags...), awsFlags...),
