@@ -12,6 +12,7 @@ type Config struct {
 	MessageDataLength int
 	Publisher         bool
 	NumChannels       int
+	SSESubscriber     bool
 	LocustHost        string
 	LocustPort        int
 	Locust090         bool
@@ -28,6 +29,7 @@ func Default() *Config {
 		MessageDataLength: 2000,
 		Publisher:         false,
 		NumChannels:       64,
+		SSESubscriber:     false,
 		LocustHost:        "localhost",
 		LocustPort:        5557,
 		Locust090:         false,
@@ -98,6 +100,13 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Publisher,
 			EnvVars:     []string{"ABLY_PUBLISHER"},
 			Usage:       "If true, the worker will publish messages to the channels. If false, the worker will subscribe to the channels.",
+		},
+		&cli.BoolFlag{
+			Name:        "sse-subscriber",
+			Value:       c.SSESubscriber,
+			Destination: &c.SSESubscriber,
+			EnvVars:     []string{"ABLY_SSE_SUBSCRIBER"},
+			Usage:       "Whether to subscribe using SSE.",
 		},
 		&cli.StringFlag{
 			Name:        "locust-host",
