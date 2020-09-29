@@ -2,14 +2,19 @@ package ably
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"math/rand"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
+	ablyrpc "github.com/ably/ably-go/ably/proto"
 	"github.com/inconshreveable/log15"
+	"github.com/r3labs/sse"
 )
 
 // PersonalConf is the Personal task's configuration.
@@ -20,6 +25,7 @@ type PersonalConf struct {
 	PublishInterval  int
 	NumSubscriptions int
 	MsgDataLength    int
+	SSESubscriber    bool
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -57,39 +63,21 @@ func personalTask(conf PersonalConf) {
 
 	channelName := randomString(channelNameLength)
 
-	subClients := []ably.RealtimeClient{}
-
+	var subClients []io.Closer
 	log.Info("creating subscribers", "channel", channelName, "count", conf.NumSubscriptions)
-	for i := 0; i < conf.NumSubscriptions; i++ {
-		select {
-		case <-ctx.Done():
+	if conf.SSESubscriber {
+		var err error
+		if subClients, err = createSSESubscribers(ctx, conf, log, channelName, wg, errorChannel); err != nil {
+			log.Error("creating sse subscribers", "err", err)
+			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
-		default:
-			log.Info("creating subscriber realtime connection", "num", i+1)
-			subClient, err := newAblyClient(conf.APIKey, conf.Env)
-			if err != nil {
-				log.Error("error creating subscriber realtime connection", "num", i+1, "err", err)
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-				return
-			}
-			defer subClient.Close()
-
-			subClients = append(subClients, *subClient)
-
-			channel := subClient.Channels.Get(channelName)
-			defer channel.Close()
-
-			log.Info("creating subscriber", "num", i+1, "channel", channelName)
-			sub, err := channel.Subscribe()
-			if err != nil {
-				log.Error("error creating subscriber", "num", i+1, "channel", channelName, "err", err)
-				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
-				return
-			}
-			defer sub.Close()
-
-			wg.Add(1)
-			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg, log.New("channel", channelName))
+		}
+	} else {
+		var err error
+		if subClients, err = createAblySubscribers(ctx, conf, log, channelName, wg, errorChannel); err != nil {
+			log.Error("creating subscribers", "err", err)
+			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+			return
 		}
 	}
 
@@ -147,6 +135,91 @@ func personalTask(conf PersonalConf) {
 			return
 		}
 	}
+}
+
+type wrappedSSEClient struct {
+	*sse.Client
+	cancel context.CancelFunc
+}
+
+func (w wrappedSSEClient) Close() error {
+	w.cancel()
+	return nil
+}
+
+func createSSESubscribers(ctx context.Context, conf PersonalConf, log log15.Logger, channelName string, wg sync.WaitGroup, errorChannel chan error) ([]io.Closer, error) {
+	subClients := make([]io.Closer, 0, conf.NumSubscriptions)
+	for i := 0; i < conf.NumSubscriptions; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			ctx, cancel := context.WithCancel(ctx)
+			log.Info("creating subscriber sse connection", "num", i+1)
+			url := url.URL{
+				Scheme:   "https",
+				Host:     ably.RestHost,
+				Path:     "/sse",
+				RawQuery: "channels=" + channelName + "&v=1.2&key=" + conf.APIKey,
+			}
+			if conf.Env != "" {
+				url.Host = conf.Env + "-" + url.Host
+			}
+			subClient := sse.NewClient(url.String())
+			subClients = append(subClients, wrappedSSEClient{Client: subClient, cancel: cancel})
+
+			wg.Add(1)
+			go func() {
+				if err := subClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
+					m := &ablyrpc.Message{}
+					if err := m.UnmarshalJSON(msg.Data); err != nil {
+						log.Error("unmarshalling message", "err", err)
+						boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+					}
+					validateMsg(m, log)
+				}); err != nil {
+					wg.Done()
+					if ctx.Err() != nil {
+						return
+					}
+					log.Error("subscribing", "err", err)
+					boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+				}
+			}()
+		}
+	}
+	return subClients, nil
+}
+
+func createAblySubscribers(ctx context.Context, conf PersonalConf, log log15.Logger, channelName string, wg sync.WaitGroup, errorChannel chan error) ([]io.Closer, error) {
+	subClients := make([]io.Closer, 0, conf.NumSubscriptions)
+	for i := 0; i < conf.NumSubscriptions; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			log.Info("creating subscriber realtime connection", "num", i+1)
+			subClient, err := newAblyClient(conf.APIKey, conf.Env)
+			if err != nil {
+				subClient.Close()
+				return nil, fmt.Errorf("creating  %dth subscriber; %w", i+1, err)
+			}
+
+			channel := subClient.Channels.Get(channelName)
+
+			log.Info("creating subscriber", "num", i+1, "channel", channelName)
+			sub, err := channel.Subscribe()
+			if err != nil {
+				subClient.Close()
+				return nil, fmt.Errorf("subscribing to %dth channel; %w", i+1, err)
+			}
+
+			wg.Add(1)
+			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg, log.New("channel", channelName))
+			subClients = append(subClients, subClient)
+		}
+	}
+	return subClients, nil
 }
 
 // CurryPersonalTask returns a function allowing to run the Personal task.
