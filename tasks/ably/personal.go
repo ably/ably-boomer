@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
-	"github.com/ably/ably-go/ably"
 	ablyrpc "github.com/ably/ably-go/ably/proto"
 	"github.com/inconshreveable/log15"
 	"github.com/r3labs/sse"
@@ -67,7 +66,7 @@ func personalTask(conf PersonalConf) {
 	log.Info("creating subscribers", "channel", channelName, "count", conf.NumSubscriptions)
 	if conf.SSESubscriber {
 		var err error
-		if subClients, err = createSSESubscribers(ctx, conf, log, channelName, wg, errorChannel); err != nil {
+		if subClients, err = createSSESubscribers(ctx, conf, log, channelName, wg); err != nil {
 			log.Error("creating sse subscribers", "err", err)
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
@@ -147,30 +146,35 @@ func (w wrappedSSEClient) Close() error {
 	return nil
 }
 
-func createSSESubscribers(ctx context.Context, conf PersonalConf, log log15.Logger, channelName string, wg sync.WaitGroup, errorChannel chan error) ([]io.Closer, error) {
+func createSSESubscribers(ctx context.Context, conf PersonalConf, log log15.Logger, channelName string, wg sync.WaitGroup) ([]io.Closer, error) {
 	subClients := make([]io.Closer, 0, conf.NumSubscriptions)
 	for i := 0; i < conf.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
+			i:=i
 			ctx, cancel := context.WithCancel(ctx)
-			log.Info("creating subscriber sse connection", "num", i+1)
 			url := url.URL{
 				Scheme:   "https",
-				Host:     ably.RestHost,
+				Host:     "realtime.ably.io",
 				Path:     "/sse",
-				RawQuery: "channels=" + channelName + "&v=1.2&key=" + conf.APIKey,
+				RawQuery: "channels=" + channelName + "&v=1.1&key=" + conf.APIKey,
 			}
-			if conf.Env != "" {
+			if conf.Env != "" && conf.Env != "production" {
 				url.Host = conf.Env + "-" + url.Host
 			}
+			log.Info("creating subscriber sse connection", "num", i+1, "url", url)
 			subClient := sse.NewClient(url.String())
 			subClients = append(subClients, wrappedSSEClient{Client: subClient, cancel: cancel})
 
 			wg.Add(1)
 			go func() {
 				if err := subClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
+					if len(msg.Data) == 0 {
+						// just ID message
+						return
+					}
 					m := &ablyrpc.Message{}
 					if err := m.UnmarshalJSON(msg.Data); err != nil {
 						log.Error("unmarshalling message", "err", err)
@@ -182,7 +186,7 @@ func createSSESubscribers(ctx context.Context, conf PersonalConf, log log15.Logg
 					if ctx.Err() != nil {
 						return
 					}
-					log.Error("subscribing", "err", err)
+					log.Error("subscribing", "err", err, "num", i+1)
 					boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				}
 			}()
