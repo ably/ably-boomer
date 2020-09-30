@@ -79,6 +79,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 		delay := i % testConfig.PublishInterval
 
 		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
+		wg.Add(1)
 		go publishOnInterval(ctx, testConfig, channel, delay, errorChannel, &wg)
 	}
 
