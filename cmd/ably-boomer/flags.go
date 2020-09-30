@@ -66,36 +66,4 @@ var (
 		EnvVars: []string{"PERF_S3_BUCKET"},
 		Usage:   "The name of the s3 bucket to upload pprof data to.",
 	}
-
-	// AWS.
-	regionFlag = &cli.StringFlag{
-		Name:    "region",
-		EnvVars: []string{"AWS_REGION"},
-		Usage:   "The AWS region to use, i.e. us-west-2.",
-	}
-	sdkLoadConfigFlag = &cli.BoolFlag{
-		Name:    "sdk-load-config",
-		EnvVars: []string{"AWS_SDK_LOAD_CONFIG"},
-		Usage:   "A boolean indicating that region should be read from config in ~/.aws.",
-	}
-	profileFlag = &cli.StringFlag{
-		Name:    "profile",
-		EnvVars: []string{"AWS_PROFILE"},
-		Usage:   "The AWS profile to use in the shared credentials file.",
-	}
-	accessKeyIDFlag = &cli.StringFlag{
-		Name:    "access-key-id",
-		EnvVars: []string{"AWS_ACCESS_KEY_ID"},
-		Usage:   "The AWS access key id credential to use.",
-	}
-	secretAccessKeyFlag = &cli.StringFlag{
-		Name:    "secret-access-key ",
-		EnvVars: []string{"AWS_SECRET_ACCESS_KEY"},
-		Usage:   " The AWS secret access key to use.",
-	}
-	sessionTokenFlag = &cli.StringFlag{
-		Name:    "session-token",
-		EnvVars: []string{"AWS_SESSION_TOKEN"},
-		Usage:   "The AWS session token to use.",
-	}
 )
