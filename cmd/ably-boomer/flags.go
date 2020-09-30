@@ -4,11 +4,6 @@ import "github.com/urfave/cli/v2"
 
 var (
 	// Ably.
-	testTypeFlag = &cli.StringFlag{
-		Name:    "test-type",
-		EnvVars: []string{"ABLY_TEST_TYPE"},
-		Usage:   "The type of load test to run. Can be either fanout, personal, sharded or composite.",
-	}
 	envFlag = &cli.StringFlag{
 		Name:    "env",
 		EnvVars: []string{"ABLY_ENV"},
