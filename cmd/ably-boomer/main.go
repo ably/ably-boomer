@@ -12,10 +12,10 @@ import (
 
 var log = log15.New()
 
-	func run(taskFn func(), c *cli.Context) error {
-		taskName := c.Command.Name
+func run(taskFn func(), c *cli.Context) error {
+	taskName := c.Command.Name
 
-		task := &boomer.Task{
+	task := &boomer.Task{
 		Name: taskName,
 		Fn:   taskFn,
 	}
@@ -63,7 +63,7 @@ func runPersonal(c *cli.Context) error {
 	taskFn := ably.CurryPersonalTask(ably.PersonalConf{
 		Logger:           log,
 		APIKey:           apiKey,
-		SSESubscriber: sseSubscriber,
+		SSESubscriber:    sseSubscriber,
 		Env:              env,
 		PublishInterval:  publishInterval,
 		NumSubscriptions: numSubscriptions,
@@ -131,7 +131,6 @@ func main() {
 					apiKeyFlag,
 					envFlag,
 					channelNameFlag,
-					boomerArgsFlag,
 				},
 			},
 			{
@@ -184,6 +183,7 @@ func main() {
 		CommandNotFound: func(c *cli.Context, comm string) {
 			log.Crit("command not found", "command", comm)
 		},
+		Flags: []cli.Flag{boomerArgsFlag},
 	}
 
 	err := app.Run(os.Args)
