@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -14,6 +15,142 @@ import (
 	ablyrpc "github.com/ably/ably-go/ably/proto"
 	"github.com/inconshreveable/log15"
 )
+
+// Conf is the task's configuration.
+type Conf struct {
+	Logger           log15.Logger
+	APIKey           string
+	Env              string
+	ChannelName      string
+	NumChannels      int
+	MsgDataLength    int
+	NumSubscriptions int
+	PublishInterval  int
+}
+
+// Task contains all data required to run an Ably Runtime task.
+type Task struct {
+	conf                   Conf
+	letters                []rune
+	userCounter            int
+	userMutex              sync.Mutex
+	errorMsgTimestampRegex *regexp.Regexp
+}
+
+// NewTask returns a new Ably Runtime task.
+func NewTask(conf Conf) *Task {
+	return &Task{
+		conf:                   conf,
+		letters:                []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+		errorMsgTimestampRegex: regexp.MustCompile(`tamp=[0-9]+`),
+	}
+}
+
+// Run starts the task.
+func (t *Task) Run() {
+	log := t.conf.Logger
+	log.Info(
+		"starting task",
+		"env", t.conf.Env,
+		"num-channels", t.conf.NumChannels,
+		"subs-per-channel", t.conf.NumSubscriptions,
+		"publish-interval", t.conf.PublishInterval,
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	boomer.Events.Subscribe("boomer:stop", cancel)
+
+	var wg sync.WaitGroup
+	errorChannel := make(chan error)
+
+	log.Info("creating realtime connection")
+	client, err := newAblyClient(t.conf.APIKey, t.conf.Env)
+	if err != nil {
+		log.Error("error creating realtime connection", "err", err)
+
+		errMsg := t.errorMsgTimestampRegex.ReplaceAllString(err.Error(), "tamp=<timestamp>")
+
+		boomer.RecordFailure("ably", "subscribe", 0, errMsg)
+		return
+	}
+	defer client.Close()
+
+	t.userMutex.Lock()
+	t.userCounter++
+	userNumber := t.userCounter
+	t.userMutex.Unlock()
+
+	shardedChannelName := generateChannelName(t.conf.NumChannels, userNumber)
+
+	shardedChannel := client.Channels.Get(shardedChannelName)
+	defer shardedChannel.Close()
+
+	log.Info("creating sharded channel subscriber", "name", shardedChannelName)
+	shardedSub, err := shardedChannel.Subscribe()
+	if err != nil {
+		log.Error("error creating sharded channel subscriber", "name", shardedChannelName, "err", err)
+
+		errMsg := t.errorMsgTimestampRegex.ReplaceAllString(err.Error(), "tamp=<timestamp>")
+
+		boomer.RecordFailure("ably", "subscribe", 0, errMsg)
+		return
+	}
+
+	wg.Add(1)
+	go t.reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel, &wg, log.New("channel", shardedChannelName))
+
+	personalChannelName := t.randomString(100)
+	personalChannel := client.Channels.Get(personalChannelName)
+	defer personalChannel.Close()
+
+	log.Info("creating personal subscribers", "channel", personalChannelName, "count", t.conf.NumSubscriptions)
+	for i := 0; i < t.conf.NumSubscriptions; i++ {
+		log.Info("creating personal subscriber", "num", i+1, "name", personalChannelName)
+		personalSub, err := personalChannel.Subscribe()
+		if err != nil {
+			log.Error("error creating personal subscriber", "num", i+1, "name", personalChannelName, "err", err)
+			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+			return
+		}
+
+		wg.Add(1)
+		go t.reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg, log.New("channel", personalChannelName))
+	}
+
+	log.Info("creating publishers", "count", t.conf.NumChannels)
+	for i := 0; i < t.conf.NumChannels; i++ {
+		channelName := generateChannelName(t.conf.NumChannels, i)
+
+		channel := client.Channels.Get(channelName)
+		defer channel.Close()
+
+		delay := i % t.conf.PublishInterval
+
+		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
+		wg.Add(1)
+		go t.publishOnInterval(ctx, t.conf.PublishInterval, t.conf.MsgDataLength, channel, delay, errorChannel, &wg, log)
+	}
+
+	select {
+	case err := <-errorChannel:
+		log.Error("error from subscriber or publisher goroutine", "err", err)
+		cancel()
+		wg.Wait()
+		client.Close()
+		return
+	case <-ctx.Done():
+		log.Info("composite task context done, cleaning up")
+		wg.Wait()
+		client.Close()
+		return
+	}
+}
+
+func generateChannelName(numChannels, number int) string {
+	return "test-channel-" + strconv.Itoa(number%numChannels)
+}
 
 func newAblyClient(apiKey, env string) (*ably.RealtimeClient, error) {
 	options := ably.NewClientOptions(apiKey)
@@ -28,16 +165,10 @@ func millisecondTimestamp() int64 {
 	return millis
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randomString(length int) string {
+func (t *Task) randomString(length int) string {
 	b := make([]rune, length)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		b[i] = t.letters[rand.Intn(len(t.letters))]
 	}
 	return string(b)
 }
@@ -49,7 +180,7 @@ func randomDelay(log log15.Logger) {
 	log.Info("continuing after random delay")
 }
 
-func publishOnInterval(
+func (t *Task) publishOnInterval(
 	ctx context.Context,
 	publishInterval,
 	msgDataLength int,
@@ -72,7 +203,7 @@ func publishOnInterval(
 	for {
 		select {
 		case <-ticker.C:
-			data := randomString(msgDataLength)
+			data := t.randomString(msgDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
@@ -95,7 +226,7 @@ func publishOnInterval(
 	}
 }
 
-func reportSubscriptionToLocust(
+func (t *Task) reportSubscriptionToLocust(
 	ctx context.Context,
 	sub *ably.Subscription,
 	conn *ably.Conn,

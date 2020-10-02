@@ -1,7 +1,9 @@
 package main
 
 import (
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/perf"
@@ -39,7 +41,7 @@ func run(taskFn func(), c *cli.Context) error {
 	return nil
 }
 
-func runComposite(c *cli.Context) error {
+func runAbly(c *cli.Context) error {
 	apiKey := c.String(apiKeyFlag.Name)
 	env := c.String(envFlag.Name)
 	channelName := c.String(channelNameFlag.Name)
@@ -47,7 +49,7 @@ func runComposite(c *cli.Context) error {
 	msgDataLength := c.Int(msgDataLengthFlag.Name)
 	numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 	publishInterval := c.Int(publishIntervalFlag.Name)
-	taskFn := ably.CurryCompositeTask(ably.CompositeConf{
+	task := ably.NewTask(ably.Conf{
 		Logger:           log,
 		APIKey:           apiKey,
 		Env:              env,
@@ -57,20 +59,21 @@ func runComposite(c *cli.Context) error {
 		NumSubscriptions: numSubscriptions,
 		PublishInterval:  publishInterval,
 	})
-
-	return run(taskFn, c)
+	return run(func() { task.Run() }, c)
 }
 
 func main() {
 	log.Info("initialising ably-boomer")
 
+	rand.Seed(time.Now().UnixNano())
+
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
-				Name:    "composite",
-				Aliases: []string{"c"},
-				Usage:   "run a composite task",
-				Action:  runComposite,
+				Name:    "ably",
+				Aliases: []string{"a"},
+				Usage:   "run an Ably Runtime task",
+				Action:  runAbly,
 				Flags: []cli.Flag{
 					apiKeyFlag,
 					envFlag,
