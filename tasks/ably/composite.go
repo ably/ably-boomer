@@ -2,7 +2,6 @@ package ably
 
 import (
 	"context"
-	"math/rand"
 	"regexp"
 	"strconv"
 	"sync"
@@ -96,9 +95,19 @@ func compositeTask(conf CompositeConf) {
 		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg, log.New("channel", personalChannelName))
 	}
 
-	log.Info("creating personal publisher", "channel", personalChannelName)
-	wg.Add(1)
-	go publishOnInterval(ctx, conf.PublishInterval, conf.MsgDataLength, personalChannel, rand.Intn(conf.PublishInterval), errorChannel, &wg, log)
+	log.Info("creating publishers", "count", conf.NumChannels)
+	for i := 0; i < conf.NumChannels; i++ {
+		channelName := generateShardedChannelName(conf.NumChannels, i)
+
+		channel := client.Channels.Get(channelName)
+		defer channel.Close()
+
+		delay := i % conf.PublishInterval
+
+		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
+		wg.Add(1)
+		go publishOnInterval(ctx, conf.PublishInterval, conf.MsgDataLength, channel, delay, errorChannel, &wg, log)
+	}
 
 	select {
 	case err := <-errorChannel:
