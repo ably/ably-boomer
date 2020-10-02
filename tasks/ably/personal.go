@@ -1,4 +1,4 @@
-package main
+package ably
 
 import (
 	"context"
@@ -9,7 +9,18 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-go/ably"
+	"github.com/inconshreveable/log15"
 )
+
+// PersonalConf is the Personal task's configuration.
+type PersonalConf struct {
+	Logger           log15.Logger
+	APIKey           string
+	Env              string
+	PublishInterval  int
+	NumSubscriptions int
+	MsgDataLength    int
+}
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -27,14 +38,15 @@ func randomString(length int) string {
 	return string(b)
 }
 
-func randomDelay() {
+func randomDelay(log log15.Logger) {
 	r := rand.Intn(60)
 	log.Info("introducing random delay", "seconds", r)
 	time.Sleep(time.Duration(r) * time.Second)
 	log.Info("continuing after random delay")
 }
 
-func personalTask(testConfig TestConfig) {
+func personalTask(conf PersonalConf) {
+	log := conf.Logger
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -47,14 +59,14 @@ func personalTask(testConfig TestConfig) {
 
 	subClients := []ably.RealtimeClient{}
 
-	log.Info("creating subscribers", "channel", channelName, "count", testConfig.NumSubscriptions)
-	for i := 0; i < testConfig.NumSubscriptions; i++ {
+	log.Info("creating subscribers", "channel", channelName, "count", conf.NumSubscriptions)
+	for i := 0; i < conf.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			log.Info("creating subscriber realtime connection", "num", i+1)
-			subClient, err := newAblyClient(testConfig)
+			subClient, err := newAblyClient(conf.APIKey, conf.Env)
 			if err != nil {
 				log.Error("error creating subscriber realtime connection", "num", i+1, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -82,7 +94,7 @@ func personalTask(testConfig TestConfig) {
 	}
 
 	log.Info("creating publisher realtime connection")
-	publishClient, err := newAblyClient(testConfig)
+	publishClient, err := newAblyClient(conf.APIKey, conf.Env)
 	if err != nil {
 		log.Error("error creating publisher realtime connection", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
@@ -101,10 +113,10 @@ func personalTask(testConfig TestConfig) {
 		}
 	}
 
-	randomDelay()
+	randomDelay(log)
 
-	log.Info("creating publisher", "channel", channelName, "period", testConfig.PublishInterval)
-	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
+	log.Info("creating publisher", "channel", channelName, "period", conf.PublishInterval)
+	ticker := time.NewTicker(time.Duration(conf.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -116,7 +128,7 @@ func personalTask(testConfig TestConfig) {
 			cleanup()
 			return
 		case <-ticker.C:
-			data := randomString(testConfig.MessageDataLength)
+			data := randomString(conf.MsgDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
@@ -137,16 +149,18 @@ func personalTask(testConfig TestConfig) {
 	}
 }
 
-func curryPersonalTask(testConfig TestConfig) func() {
+// CurryPersonalTask returns a function allowing to run the Personal task.
+func CurryPersonalTask(conf PersonalConf) func() {
+	log := conf.Logger
 	log.Info(
 		"starting personal task",
-		"env", testConfig.Env,
-		"publish-interval", testConfig.PublishInterval,
-		"subs-per-channel", testConfig.NumSubscriptions,
-		"message-size", testConfig.MessageDataLength,
+		"env", conf.Env,
+		"publish-interval", conf.PublishInterval,
+		"subs-per-channel", conf.NumSubscriptions,
+		"message-size", conf.MsgDataLength,
 	)
 
 	return func() {
-		personalTask(testConfig)
+		personalTask(conf)
 	}
 }

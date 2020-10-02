@@ -11,23 +11,16 @@ import (
 
 func TestNewPerf(t *testing.T) {
 	t.Run("perf works with sensible defaults", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
-		}
-
 		s3Client := &mockS3{}
 
-		perf := NewWithS3(config, s3Client)
+		perf := NewWithS3(Conf{
+			CPUProfileDir: os.TempDir(),
+			S3Bucket:      "ably-logs-dev",
+		}, s3Client)
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
-			// Cleanup the pprof file if we can
+			// Cleanup the pprof file if we can.
 			if path.Ext(perf.fileName) == ".pprof" {
 				os.Remove(perf.fileName)
 			}
@@ -38,12 +31,12 @@ func TestNewPerf(t *testing.T) {
 
 		time.Sleep(100 * time.Millisecond)
 
-		perfErr := perf.Stop()
-		if perfErr != nil {
-			ts.Fatalf("error stopping perf: %s", perfErr)
+		err := perf.Stop()
+		if err != nil {
+			ts.Fatalf("error stopping perf: %s", err)
 		}
 
-		// Test that a cpuprofile was written to disk
+		// Test that a cpuprofile was written to disk.
 		fileExt := path.Ext(perf.fileName)
 		expectedFileExt := ".pprof"
 		if fileExt != expectedFileExt {
@@ -53,22 +46,22 @@ func TestNewPerf(t *testing.T) {
 				expectedFileExt,
 			)
 		}
-		pprofStat, pprofStatErr := os.Stat(perf.fileName)
-		if pprofStatErr != nil {
+		pprofStat, err := os.Stat(perf.fileName)
+		if err != nil {
 			ts.Fatalf(
 				"pprof file missing from disk: %s",
-				pprofStatErr,
+				err,
 			)
 		} else if pprofStat.Size() == 0 {
 			ts.Fatalf("pprof file is empty")
 		}
 
-		// Test that the pprof file was uploaded to the ably-logs-dev s3 bucket
+		// Test that the pprof file was uploaded to the ably-logs-dev s3 bucket.
 		if s3Client.input == nil {
 			ts.Fatalf("s3 PutObject was not called")
 		}
 
-		// S3 Bucket
+		// S3 Bucket.
 		bucket := s3Client.input.Bucket
 		expectedBucket := "ably-logs-dev"
 		if bucket == nil {
@@ -81,7 +74,7 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		// S3 Key
+		// S3 Key.
 		key := s3Client.input.Key
 		expectedKey := path.Join(defaultKeyPrefix, path.Base(perf.fileName))
 		if key == nil {
@@ -94,7 +87,7 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		// S3 ACL
+		// S3 ACL.
 		acl := s3Client.input.ACL
 		expectedACL := "private"
 		if acl == nil {
@@ -107,9 +100,9 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		// S3 Body
-		s3File, s3FileOk := s3Client.input.Body.(*os.File)
-		if !s3FileOk || s3File == nil {
+		// S3 Body.
+		s3File, ok := s3Client.input.Body.(*os.File)
+		if !ok || s3File == nil {
 			ts.Errorf("missing file as s3 PutObject body")
 		} else if s3File.Name() != perf.fileName {
 			ts.Errorf(
@@ -119,7 +112,7 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		// S3 ContentLength
+		// S3 ContentLength.
 		s3ContentLength := s3Client.input.ContentLength
 		expectedS3ContentLength := pprofStat.Size()
 		if s3ContentLength == nil {
@@ -132,7 +125,7 @@ func TestNewPerf(t *testing.T) {
 			)
 		}
 
-		// S3 ContentType
+		// S3 ContentType.
 		s3ContentType := s3Client.input.ContentType
 		expectedS3ContentType := "application/octet-stream"
 		if s3ContentType == nil {
@@ -147,22 +140,15 @@ func TestNewPerf(t *testing.T) {
 	})
 
 	t.Run("perf does not write to s3 unless configured", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
-		}
-
 		s3Client := &mockS3{}
 
-		perf := NewWithS3(config, s3Client)
+		perf := NewWithS3(Conf{
+			CPUProfileDir: os.TempDir(),
+		}, s3Client)
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
-			// Cleanup the pprof file if we can
+			// Cleanup the pprof file if we can.
 			if path.Ext(perf.fileName) == ".pprof" {
 				os.Remove(perf.fileName)
 			}
@@ -173,12 +159,12 @@ func TestNewPerf(t *testing.T) {
 
 		time.Sleep(100 * time.Millisecond)
 
-		perfErr := perf.Stop()
-		if perfErr != nil {
-			ts.Fatalf("error stopping perf: %s", perfErr)
+		err := perf.Stop()
+		if err != nil {
+			ts.Fatalf("error stopping perf: %s", err)
 		}
 
-		// Test that a cpuprofile was written to disk
+		// Test that a cpuprofile was written to disk.
 		fileExt := path.Ext(perf.fileName)
 		expectedFileExt := ".pprof"
 		if fileExt != expectedFileExt {
@@ -188,45 +174,48 @@ func TestNewPerf(t *testing.T) {
 				expectedFileExt,
 			)
 		}
-		pprofStat, pprofStatErr := os.Stat(perf.fileName)
-		if pprofStatErr != nil {
+		pprofStat, err := os.Stat(perf.fileName)
+		if err != nil {
 			ts.Fatalf(
 				"pprof file missing from disk: %s",
-				pprofStatErr,
+				err,
 			)
 		} else if pprofStat.Size() == 0 {
 			ts.Fatalf("pprof file is empty")
 		}
 
-		// Test that the pprof file was uploaded to the ably-logs-dev s3 bucket
+		// Test that the pprof file was uploaded to the ably-logs-dev s3 bucket.
 		if s3Client.input != nil {
 			ts.Fatalf("s3 PutObject should not be called")
 		}
 	})
 
 	t.Run("perf doesn't run by default", func(ts *testing.T) {
-		// Check that the environment doesn't contain perf configuration
-		profileDir, profileDirSet := os.LookupEnv("PERF_CPU_PROFILE_DIR")
-		if profileDirSet && profileDir != "" {
+		// Check that the environment doesn't contain perf configuration.
+		profileDir, set := os.LookupEnv("PERF_CPU_PROFILE_DIR")
+		if set && profileDir != "" {
 			ts.Fatalf(
 				"PERF_CPU_PROFILE_DIR env is currently set: %s",
 				profileDir,
 			)
 		}
 
-		bucket, bucketSet := os.LookupEnv("PERF_CPU_S3_BUCKET")
-		if bucketSet && bucket != "" {
+		bucket, set := os.LookupEnv("PERF_CPU_S3_BUCKET")
+		if set && bucket != "" {
 			ts.Fatalf(
 				"PERF_CPU_S3_BUCKET env is currently set: %s",
 				bucket,
 			)
 		}
 
-		perf := New()
+		perf := New(Conf{
+			CPUProfileDir: profileDir,
+			S3Bucket:      bucket,
+		})
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
-			// Cleanup the pprof file if we can
+			// Cleanup the pprof file if we can.
 			if path.Ext(perf.fileName) == ".pprof" {
 				os.Remove(perf.fileName)
 			}
@@ -237,39 +226,32 @@ func TestNewPerf(t *testing.T) {
 
 		time.Sleep(100 * time.Millisecond)
 
-		perfErr := perf.Stop()
-		if perfErr != nil {
-			ts.Fatalf("error stopping perf: %s", perfErr)
+		err := perf.Stop()
+		if err != nil {
+			ts.Fatalf("error stopping perf: %s", err)
 		}
 
-		// Test that a cpuprofile is not taken by default
+		// Test that a cpuprofile is not taken by default.
 		if perf.fileName != "" {
 			ts.Fatalf("expected no pprof file by default")
 		}
 	})
 
 	t.Run("perf defaults to real s3 client", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
-		}
+		perf := NewWithS3(Conf{
+			CPUProfileDir: os.TempDir(),
+			S3Bucket:      "ably-logs-dev",
+		}, nil)
 
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
-		}
-
-		perf := NewWithS3(config, nil)
-
-		configuredS3Client, configuredS3ClientErr := perf.configuredS3Client()
-		if configuredS3ClientErr != nil {
+		s3Cli, err := perf.configuredS3Client()
+		if err != nil {
 			ts.Fatalf(
 				"unexpected error getting s3 client: %s",
-				configuredS3ClientErr,
+				err,
 			)
 		} else {
-			s3Client, s3ClientOK := configuredS3Client.(*s3.S3)
-			if !s3ClientOK || s3Client == nil {
+			s3Client, ok := s3Cli.(*s3.S3)
+			if !ok || s3Client == nil {
 				ts.Fatalf("expected s3 client to default to a real client")
 			}
 		}

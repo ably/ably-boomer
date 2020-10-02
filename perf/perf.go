@@ -15,33 +15,41 @@ import (
 
 const defaultKeyPrefix = "perf"
 
-// S3ObjectPutter provides a PutObject function for writing to S3
+// S3ObjectPutter provides a PutObject function for writing to S3.
 type S3ObjectPutter interface {
 	PutObject(*s3.PutObjectInput) (*s3.PutObjectOutput, error)
 }
 
-// Perf provides profiling and performance debugging instrumentation
+// Conf represents Perf's configuration.
+type Conf struct {
+	CPUProfileDir string
+	S3Bucket      string
+}
+
+// Perf provides profiling and performance debugging instrumentation.
 type Perf struct {
 	started   bool
-	config    *Config
+	conf      Conf
 	s3Client  S3ObjectPutter
 	pprofFile *os.File
 	fileName  string
 }
 
-// Only allow alphanumeric chars, - _ and . in file names
+// Only allow alphanumeric chars, - _ and . in file names.
 var replaceChars = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 
-// New creates a new instance of a Perf with defaults
-func New() *Perf {
-	return &Perf{}
+// New creates a new instance of a Perf with defaults.
+func New(conf Conf) *Perf {
+	return &Perf{
+		conf: conf,
+	}
 }
 
 // NewWithS3 creates a new instance of a Perf with defaults and a supplied S3
-// client override
-func NewWithS3(config *Config, s3Client S3ObjectPutter) *Perf {
+// client override.
+func NewWithS3(conf Conf, s3Client S3ObjectPutter) *Perf {
 	return &Perf{
-		config:   config,
+		conf:     conf,
 		s3Client: s3Client,
 	}
 }
@@ -53,22 +61,12 @@ func (p *Perf) Start() error {
 		return fmt.Errorf("perf is already started")
 	}
 
-	if p.config == nil {
-		perfConfig, perfConfigErr := NewConfig(os.LookupEnv)
-
-		if perfConfigErr != nil {
-			return perfConfigErr
-		}
-
-		p.config = perfConfig
-	}
-
-	if p.config.CPUProfileDir == "" {
+	if p.conf.CPUProfileDir == "" {
 		return nil
 	}
 
-	hostname, hostnameErr := os.Hostname()
-	if hostnameErr != nil {
+	hostname, err := os.Hostname()
+	if err != nil {
 		hostname = "unknown"
 	}
 	baseName := replaceChars.ReplaceAllString(
@@ -79,10 +77,10 @@ func (p *Perf) Start() error {
 		),
 		"_",
 	)
-	p.fileName = path.Join(p.config.CPUProfileDir, baseName)
-	f, fErr := os.Create(p.fileName)
-	if fErr != nil {
-		return fErr
+	p.fileName = path.Join(p.conf.CPUProfileDir, baseName)
+	f, err := os.Create(p.fileName)
+	if err != nil {
+		return err
 	}
 
 	p.pprofFile = f
@@ -103,61 +101,61 @@ func (p *Perf) Stop() error {
 	defer p.pprofFile.Close()
 
 	pprof.StopCPUProfile()
-	syncErr := p.pprofFile.Sync()
-	if syncErr != nil {
-		return fmt.Errorf("error syncing pprof file: %s", syncErr)
+	err := p.pprofFile.Sync()
+	if err != nil {
+		return fmt.Errorf("error syncing pprof file: %s", err)
 	}
 
-	closeErr := p.pprofFile.Close()
-	if closeErr != nil {
-		return fmt.Errorf("error closing pprof file: %s", closeErr)
+	err = p.pprofFile.Close()
+	if err != nil {
+		return fmt.Errorf("error closing pprof file: %s", err)
 	}
 
-	if p.config.S3Bucket != "" {
+	if p.conf.S3Bucket != "" {
 		return p.uploadToS3(p.pprofFile.Name())
 	}
 
 	return nil
 }
 
-// Returns either the configured s3 client or the default s3 client if unset
+// Returns either the configured s3 client or the default s3 client if unset.
 func (p *Perf) configuredS3Client() (S3ObjectPutter, error) {
 	if p.s3Client != nil {
 		return p.s3Client, nil
 	}
 
-	sess, sessErr := session.NewSession()
-	if sessErr != nil {
-		return nil, sessErr
+	sess, err := session.NewSession()
+	if err != nil {
+		return nil, err
 	}
 
 	return s3.New(sess), nil
 }
 
-// Uploads a file to the S3 perf bucket
+// Uploads a file to the S3 perf bucket.
 func (p *Perf) uploadToS3(fileName string) error {
-	s3Client, s3ClientErr := p.configuredS3Client()
-	if s3ClientErr != nil {
-		return s3ClientErr
+	s3Client, err := p.configuredS3Client()
+	if err != nil {
+		return err
 	}
 
-	file, fileErr := os.Open(fileName)
-	if fileErr != nil {
-		return fileErr
+	file, err := os.Open(fileName)
+	if err != nil {
+		return err
 	}
 	defer file.Close()
 
 	key := path.Join(defaultKeyPrefix, path.Base(fileName))
 
-	// Get file size and read the file content into a buffer
-	fileInfo, fileInfoErr := file.Stat()
-	if fileInfoErr != nil {
-		return fmt.Errorf("error reading file stat: %s", fileInfoErr)
+	// Get file size and read the file content into a buffer.
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("error reading file stat: %s", err)
 	}
 	size := fileInfo.Size()
 
-	_, s3Err := s3Client.PutObject(&s3.PutObjectInput{
-		Bucket:        aws.String(p.config.S3Bucket),
+	_, err = s3Client.PutObject(&s3.PutObjectInput{
+		Bucket:        aws.String(p.conf.S3Bucket),
 		Key:           aws.String(key),
 		ACL:           aws.String("private"),
 		Body:          file,
@@ -165,8 +163,8 @@ func (p *Perf) uploadToS3(fileName string) error {
 		ContentType:   aws.String("application/octet-stream"),
 	})
 
-	if s3Err != nil {
-		return fmt.Errorf("s3 PutObject returned error: %s", s3Err)
+	if err != nil {
+		return fmt.Errorf("s3 PutObject returned error: %s", err)
 	}
 
 	return nil

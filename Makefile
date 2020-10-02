@@ -1,6 +1,8 @@
 DOCKER_IMAGE_REPO=ablyrealtime/ably-boomer
 DOCKER_IMAGE_TAG=latest
 
+all: build
+
 # install shared tools to local bin directory
 BIN = $(CURDIR)/bin
 $(BIN):
@@ -10,7 +12,6 @@ $(BIN)/%: | $(BIN)
 		env GO111MODULE=off GOPATH=$$tmp GOBIN=$(BIN) go get $(PACKAGE) \
 		|| ret=$$?; \
 		rm -rf $$tmp ; exit $$ret
-
 $(BIN)/golint: PACKAGE=golang.org/x/lint/golint
 
 image:
@@ -20,22 +21,22 @@ push:
 	docker push $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)
 
 build:
-	go vet ./ably
-	go build -o ably-boomer ./ably
+	go vet ./cmd/ably-boomer
+	go build -o ./bin/ably-boomer ./cmd/ably-boomer
 
 cover: lint
 	mkdir -p ./coverage
-	go test -covermode=atomic -coverprofile=coverage/coverage.out ./ably/...
+	go test -covermode=atomic -coverprofile=coverage/coverage.out ./...
 	go tool cover -html=./coverage/coverage.out -o=./coverage/coverage.html
 
 GOLINT = $(BIN)/golint
 lint: | $(GOLINT)
-	$(GOLINT) -set_exit_status ./ably/...
+	$(GOLINT) -set_exit_status ./...
 
-test: fmt lint
-	go test ./ably/...
+test: fmt
+	go test ./...
 
 fmt:
-	go fmt ./ably/...
+	go fmt ./...
 
-.PHONY: image push build test fmt
+.PHONY: all image push build cover lint test fmt
