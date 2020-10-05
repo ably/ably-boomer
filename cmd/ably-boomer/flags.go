@@ -45,9 +45,10 @@ var (
 		Usage:   "The number of channels a worker could subscribe to. A channel will be chosen at random.",
 	}
 	sseSubscriberFlag = &cli.BoolFlag{
-		Name:  "sse-subscriber",
-		Value: false,
-		Usage: "Whether to subscribe using SSE.",
+		Name:    "sse-subscriber",
+		EnvVars: []string{"ABLY_SSE_SUBSCRIBER"},
+		Value:   false,
+		Usage:   "Whether to subscribe using SSE.",
 	}
 
 	// Perf.
@@ -61,6 +62,8 @@ var (
 		EnvVars: []string{"PERF_S3_BUCKET"},
 		Usage:   "The name of the s3 bucket to upload pprof data to.",
 	}
+
+	// Boomer.
 	boomerArgsFlag = &cli.StringSliceFlag{
 		Name: "boomer",
 		Value: cli.NewStringSlice(
