@@ -14,6 +14,7 @@ var log = log15.New()
 
 func run(taskFn func(), c *cli.Context) error {
 	taskName := c.Command.Name
+
 	task := &boomer.Task{
 		Name: taskName,
 		Fn:   taskFn,
@@ -31,6 +32,8 @@ func run(taskFn func(), c *cli.Context) error {
 	defer perf.Stop()
 
 	log.Info("running ably-boomer", "task name", taskName)
+	args := c.StringSlice(boomerArgsFlag.Name)
+	os.Args = append([]string{"boomer"}, args...)
 	boomer.Run(task)
 
 	return nil
@@ -56,9 +59,11 @@ func runPersonal(c *cli.Context) error {
 	publishInterval := c.Int(publishIntervalFlag.Name)
 	numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 	msgDataLength := c.Int(msgDataLengthFlag.Name)
+	sseSubscriber := c.Bool(sseSubscriberFlag.Name)
 	taskFn := ably.CurryPersonalTask(ably.PersonalConf{
 		Logger:           log,
 		APIKey:           apiKey,
+		SSESubscriber:    sseSubscriber,
 		Env:              env,
 		PublishInterval:  publishInterval,
 		NumSubscriptions: numSubscriptions,
@@ -139,6 +144,7 @@ func main() {
 					publishIntervalFlag,
 					numSubscriptionsFlag,
 					msgDataLengthFlag,
+					sseSubscriberFlag,
 				},
 			},
 			{
@@ -177,6 +183,7 @@ func main() {
 		CommandNotFound: func(c *cli.Context, comm string) {
 			log.Crit("command not found", "command", comm)
 		},
+		Flags: []cli.Flag{boomerArgsFlag},
 	}
 
 	err := app.Run(os.Args)

@@ -49,6 +49,11 @@ var (
 		Value:   64,
 		Usage:   "The number of channels a worker could subscribe to. A channel will be chosen at random. Only used for sharded and composite type tests.",
 	}
+	sseSubscriberFlag = &cli.BoolFlag{
+		Name:  "sse-subscriber",
+		Value: false,
+		Usage: "Whether to subscribe using SSE.",
+	}
 
 	// Perf.
 	cpuProfileDirFlag = &cli.PathFlag{
@@ -60,5 +65,12 @@ var (
 		Name:    "s3-bucket",
 		EnvVars: []string{"PERF_S3_BUCKET"},
 		Usage:   "The name of the s3 bucket to upload pprof data to.",
+	}
+	boomerArgsFlag = &cli.StringSliceFlag{
+		Name: "boomer",
+		Value: cli.NewStringSlice(
+			"-master-version-0.9.0",
+			"-master-host", "127.0.0.1",
+			"-master-port", "5557"),
 	}
 )
