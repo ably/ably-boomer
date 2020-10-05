@@ -47,6 +47,7 @@ func runAbly(c *cli.Context) error {
 	channelName := c.String(channelNameFlag.Name)
 	numChannels := c.Int(numChannelsFlag.Name)
 	msgDataLength := c.Int(msgDataLengthFlag.Name)
+	sseSubscriber := c.Bool(sseSubscriberFlag.Name)
 	numSubscriptions := c.Int(numSubscriptionsFlag.Name)
 	publishInterval := c.Int(publishIntervalFlag.Name)
 	task := ably.NewTask(ably.Conf{
@@ -56,6 +57,7 @@ func runAbly(c *cli.Context) error {
 		ChannelName:      channelName,
 		NumChannels:      numChannels,
 		MsgDataLength:    msgDataLength,
+		SSESubscriber:    sseSubscriber,
 		NumSubscriptions: numSubscriptions,
 		PublishInterval:  publishInterval,
 	})
@@ -80,6 +82,7 @@ func main() {
 					channelNameFlag,
 					numChannelsFlag,
 					msgDataLengthFlag,
+					sseSubscriberFlag,
 					numSubscriptionsFlag,
 					publishIntervalFlag,
 				},
