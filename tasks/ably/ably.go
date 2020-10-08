@@ -17,6 +17,7 @@ import (
 	ablyrpc "github.com/ably/ably-go/ably/proto"
 	"github.com/inconshreveable/log15"
 	"github.com/r3labs/sse"
+	"golang.org/x/sync/errgroup"
 )
 
 // Conf is the task's configuration.
@@ -66,8 +67,7 @@ func (t *Task) Run() {
 
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
-	var wg sync.WaitGroup
-	errorChannel := make(chan error)
+	errGroup, ctx := errgroup.WithContext(ctx)
 
 	log.Info("creating realtime connection")
 	client, err := newAblyClient(t.conf.APIKey, t.conf.Env)
@@ -102,8 +102,9 @@ func (t *Task) Run() {
 		return
 	}
 
-	wg.Add(1)
-	go t.reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel, &wg, log.New("channel", shardedChannelName))
+	errGroup.Go(func() error {
+		return t.reportSubscriptionToLocust(ctx, shardedSub, client.Connection, log.New("channel", shardedChannelName))
+	})
 
 	personalChannelName := t.randomString(100)
 	personalChannel := client.Channels.Get(personalChannelName)
@@ -113,14 +114,14 @@ func (t *Task) Run() {
 	log.Info("creating personal subscribers", "channel", personalChannelName, "count", t.conf.NumSubscriptions)
 	if t.conf.SSESubscriber {
 		var err error
-		if subClients, err = t.createSSESubscribers(ctx, personalChannelName, wg); err != nil {
+		if subClients, err = t.createSSESubscribers(ctx, personalChannelName, errGroup); err != nil {
 			log.Error("creating sse subscribers", "err", err)
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
 		}
 	} else {
 		var err error
-		if subClients, err = t.createAblySubscribers(ctx, personalChannelName, wg, errorChannel); err != nil {
+		if subClients, err = t.createAblySubscribers(ctx, personalChannelName, errGroup); err != nil {
 			log.Error("creating subscribers", "err", err)
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
@@ -142,21 +143,19 @@ func (t *Task) Run() {
 		delay := i % t.conf.PublishInterval
 
 		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
-		wg.Add(1)
-		go t.publishOnInterval(ctx, t.conf.PublishInterval, t.conf.MsgDataLength, channel, delay, errorChannel, &wg, log)
+
+		errGroup.Go(func() error {
+			return t.publishOnInterval(ctx, t.conf.PublishInterval, t.conf.MsgDataLength, channel, delay, log)
+		})
 	}
 
-	select {
-	case err := <-errorChannel:
+	err = errGroup.Wait()
+	if err != nil && err != context.Canceled {
 		log.Error("error from subscriber or publisher goroutine", "err", err)
-		cancel()
-		wg.Wait()
-		return
-	case <-ctx.Done():
-		log.Info("composite task context done, cleaning up")
-		wg.Wait()
 		return
 	}
+
+	log.Info("task context done, cleaning up")
 }
 
 type wrappedSSEClient struct {
@@ -169,7 +168,7 @@ func (w wrappedSSEClient) Close() error {
 	return nil
 }
 
-func (t *Task) createSSESubscribers(ctx context.Context, channelName string, wg sync.WaitGroup) ([]io.Closer, error) {
+func (t *Task) createSSESubscribers(ctx context.Context, channelName string, errGroup *errgroup.Group) ([]io.Closer, error) {
 	log := t.conf.Logger
 	subClients := make([]io.Closer, 0, t.conf.NumSubscriptions)
 	for i := 0; i < t.conf.NumSubscriptions; i++ {
@@ -192,8 +191,7 @@ func (t *Task) createSSESubscribers(ctx context.Context, channelName string, wg 
 			subClient := sse.NewClient(url.String())
 			subClients = append(subClients, wrappedSSEClient{Client: subClient, cancel: cancel})
 
-			wg.Add(1)
-			go func() {
+			errGroup.Go(func() error {
 				if err := subClient.SubscribeWithContext(ctx, "", func(msg *sse.Event) {
 					if len(msg.Data) == 0 {
 						// just ID message
@@ -206,20 +204,21 @@ func (t *Task) createSSESubscribers(ctx context.Context, channelName string, wg 
 					}
 					validateMsg(m, log)
 				}); err != nil {
-					wg.Done()
 					if ctx.Err() != nil {
-						return
+						return nil
 					}
 					log.Error("subscribing", "err", err, "num", i+1)
 					boomer.RecordFailure("ably", "subscribe", 0, err.Error())
+					return err
 				}
-			}()
+				return nil
+			})
 		}
 	}
 	return subClients, nil
 }
 
-func (t *Task) createAblySubscribers(ctx context.Context, channelName string, wg sync.WaitGroup, errorChannel chan error) ([]io.Closer, error) {
+func (t *Task) createAblySubscribers(ctx context.Context, channelName string, errGroup *errgroup.Group) ([]io.Closer, error) {
 	log := t.conf.Logger
 	subClients := make([]io.Closer, 0, t.conf.NumSubscriptions)
 	for i := 0; i < t.conf.NumSubscriptions; i++ {
@@ -243,8 +242,9 @@ func (t *Task) createAblySubscribers(ctx context.Context, channelName string, wg
 				return nil, fmt.Errorf("subscribing to %dth channel; %w", i+1, err)
 			}
 
-			wg.Add(1)
-			go t.reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg, log.New("channel", channelName))
+			errGroup.Go(func() error {
+				return t.reportSubscriptionToLocust(ctx, sub, subClient.Connection, log.New("channel", channelName))
+			})
 			subClients = append(subClients, subClient)
 		}
 	}
@@ -276,28 +276,23 @@ func (t *Task) randomString(length int) string {
 	return string(b)
 }
 
-func randomDelay(log log15.Logger) {
-	r := rand.Intn(60)
-	log.Info("introducing random delay", "seconds", r)
-	time.Sleep(time.Duration(r) * time.Second)
-	log.Info("continuing after random delay")
-}
-
 func (t *Task) publishOnInterval(
 	ctx context.Context,
 	publishInterval,
 	msgDataLength int,
 	channel *ably.RealtimeChannel,
 	delay int,
-	errorChannel chan<- error,
-	wg *sync.WaitGroup,
 	log log15.Logger,
-) {
+) error {
 	log = log.New("channel", channel.Name)
 	log.Info("creating publisher", "period", publishInterval)
 
 	log.Info("introducing random delay before starting to publish", "seconds", delay)
-	time.Sleep(time.Duration(delay) * time.Second)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(time.Duration(delay) * time.Second):
+	}
 	log.Info("continuing after random delay")
 
 	ticker := time.NewTicker(time.Duration(publishInterval) * time.Second)
@@ -314,17 +309,12 @@ func (t *Task) publishOnInterval(
 			if err != nil {
 				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
-				errorChannel <- err
-				ticker.Stop()
-				wg.Done()
-				return
+				return err
 			}
 
 			boomer.RecordSuccess("ably", "publish", 0, 0)
 		case <-ctx.Done():
-			ticker.Stop()
-			wg.Done()
-			return
+			return ctx.Err()
 		}
 	}
 }
@@ -333,10 +323,8 @@ func (t *Task) reportSubscriptionToLocust(
 	ctx context.Context,
 	sub *ably.Subscription,
 	conn *ably.Conn,
-	errorChannel chan<- error,
-	wg *sync.WaitGroup,
 	log log15.Logger,
-) {
+) error {
 	connectionStateChannel := make(chan ably.State)
 	conn.On(connectionStateChannel)
 
@@ -347,8 +335,7 @@ func (t *Task) reportSubscriptionToLocust(
 		case connState, ok := <-connectionStateChannel:
 			if !ok {
 				log.Warn("connection state channel closed", "id", conn.ID())
-				errorChannel <- errors.New("connection state channel closed")
-				continue
+				return errors.New("connection state channel closed")
 			}
 
 			log.Info(
@@ -369,13 +356,11 @@ func (t *Task) reportSubscriptionToLocust(
 			}
 		case <-ctx.Done():
 			log.Info("subscriber context done", "id", conn.ID())
-			wg.Done()
-			return
+			return ctx.Err()
 		case msg, ok := <-sub.MessageChannel():
 			if !ok {
 				log.Warn("subscriber message channel closed", "id", conn.ID())
-				errorChannel <- errors.New("subscriber message channel closed")
-				continue
+				return errors.New("subscriber message channel closed")
 			}
 			validateMsg(msg, log)
 		}
