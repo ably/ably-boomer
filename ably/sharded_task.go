@@ -22,6 +22,21 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 	time.Sleep(time.Duration(delay) * time.Second)
 	log.Info("continuing after random delay")
 
+	data := randomString(testConfig.MessageDataLength)
+	timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
+
+	log.Info("publishing message", "size", len(data))
+	_, err := channel.Publish(timePublished, data)
+	if err != nil {
+		log.Error("error publishing message", "err", err)
+		boomer.RecordFailure("ably", "publish", 0, err.Error())
+		errorChannel <- err
+		wg.Done()
+		return
+	} else {
+		boomer.RecordSuccess("ably", "publish", 0, 0)
+	}
+
 	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
 	defer ticker.Stop()
 
