@@ -120,7 +120,7 @@ func personalTask(testConfig TestConfig) {
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
-			_, err := channel.Publish(timePublished, data)
+			err := publishWithRetries(channel, timePublished, data)
 
 			if err != nil {
 				log.Error("error publishing message", "err", err)
@@ -135,6 +135,21 @@ func personalTask(testConfig TestConfig) {
 			return
 		}
 	}
+}
+
+// publishWithRetries makes multiple attempts to publish a message on the given
+// channel.
+func publishWithRetries(channel *ably.RealtimeChannel, name string, data interface{}) (err error) {
+	timeout := 30 * time.Second
+	delay := 100 * time.Millisecond
+	for start := time.Now(); time.Since(start) < timeout; time.Sleep(delay) {
+		_, err = channel.Publish(name, data)
+		if err == nil {
+			return
+		}
+		log.Warn("error publishing message in retry loop", "err", err)
+	}
+	return
 }
 
 func curryPersonalTask(testConfig TestConfig) func() {
