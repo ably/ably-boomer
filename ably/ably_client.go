@@ -12,9 +12,22 @@ func newAblyClient(testConfig TestConfig) (client *ably.RealtimeClient, err erro
 	options := ably.NewClientOptions(testConfig.APIKey)
 	options.Environment = testConfig.Env
 
-	timeout := 30 * time.Second
-	delay := 100 * time.Millisecond
-	for start := time.Now(); time.Since(start) < timeout; time.Sleep(delay) {
+	client, err = ably.NewRealtimeClient(options)
+	if err == nil {
+		return
+	}
+	log.Warn("error creating client, will retry", "err", err)
+
+	// retry with a backoff
+	delays := []time.Duration{
+		100 * time.Millisecond,
+		1 * time.Second,
+		5 * time.Second,
+		10 * time.Second,
+		10 * time.Second,
+	}
+	for _, delay := range delays {
+		time.Sleep(delay)
 		client, err = ably.NewRealtimeClient(options)
 		if err == nil {
 			return
