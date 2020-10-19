@@ -26,8 +26,7 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 	timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 	log.Info("publishing message", "size", len(data))
-	_, err := channel.Publish(timePublished, data)
-	if err != nil {
+	if err := publishWithRetries(channel, timePublished, data); err != nil {
 		log.Error("error publishing message", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
 		errorChannel <- err
@@ -47,8 +46,7 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
-			_, err := channel.Publish(timePublished, data)
-			if err != nil {
+			if err := publishWithRetries(channel, timePublished, data); err != nil {
 				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
 				errorChannel <- err
