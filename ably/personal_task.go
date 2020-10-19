@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -139,17 +140,28 @@ func personalTask(testConfig TestConfig) {
 
 // publishWithRetries makes multiple attempts to publish a message on the given
 // channel.
+//
+// TODO: remove the retries once handled by ably-go.
 func publishWithRetries(channel *ably.RealtimeChannel, name string, data interface{}) (err error) {
 	timeout := 30 * time.Second
 	delay := 100 * time.Millisecond
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(delay) {
 		_, err = channel.Publish(name, data)
-		if err == nil {
+		if err == nil || !isRetriablePublishError(err) {
 			return
 		}
 		log.Warn("error publishing message in retry loop", "err", err)
 	}
 	return
+}
+
+// isRetriablePublishError returns whether the given publish error is retriable
+// by checking if the error string indicates the connection is in a failed
+// state.
+//
+// TODO: remove once this is handled by ably-go.
+func isRetriablePublishError(err error) bool {
+	return strings.Contains(err.Error(), "attempted to attach channel to inactive connection")
 }
 
 func curryPersonalTask(testConfig TestConfig) func() {
