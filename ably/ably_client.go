@@ -8,6 +8,8 @@ import (
 
 // newAblyClient creates a new Ably realtime client, making multiple attempts
 // to avoid transient connection errors being reported as failures.
+//
+// TODO: remove the retries once handled by ably-go.
 func newAblyClient(testConfig TestConfig) (client *ably.RealtimeClient, err error) {
 	options := ably.NewClientOptions(testConfig.APIKey)
 	options.Environment = testConfig.Env
@@ -32,6 +34,9 @@ func newAblyClient(testConfig TestConfig) (client *ably.RealtimeClient, err erro
 		if err == nil {
 			return
 		}
+		// ideally we'd only retry recoverable errors, but that really
+		// ought to be done in ably-go, so let's defer to when that's
+		// implemented in ably-go
 		log.Warn("error creating ably client in retry loop", "err", err)
 	}
 	return
