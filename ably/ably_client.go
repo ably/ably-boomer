@@ -12,7 +12,8 @@ import (
 // TODO: remove the retries once handled by ably-go.
 func newAblyClient(testConfig TestConfig) (client *ably.RealtimeClient, err error) {
 	options := ably.NewClientOptions(testConfig.APIKey)
-	options.Environment = testConfig.Env
+	options.Environment = testConfig.Env	
+	options.NoQueueing = true
 
 	client, err = ably.NewRealtimeClient(options)
 	if err == nil {
