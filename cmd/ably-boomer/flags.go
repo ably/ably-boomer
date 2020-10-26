@@ -14,12 +14,6 @@ var (
 		EnvVars: []string{"ABLY_API_KEY"},
 		Usage:   "The API key to use.",
 	}
-	channelNameFlag = &cli.StringFlag{
-		Name:    "channel-name",
-		EnvVars: []string{"ABLY_CHANNEL_NAME"},
-		Value:   "test_channel",
-		Usage:   "The name of the channel to use.",
-	}
 	publishIntervalFlag = &cli.IntFlag{
 		Name:    "publish-interval",
 		EnvVars: []string{"ABLY_PUBLISH_INTERVAL"},

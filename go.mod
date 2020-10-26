@@ -15,6 +15,8 @@ require (
 	github.com/r3labs/sse v0.0.0-20200828202401-10175c338a0a
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/zeromq/goczmq v4.1.0+incompatible // indirect
+	go.uber.org/atomic v1.6.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/yaml.v2 v2.2.4 // indirect
 )

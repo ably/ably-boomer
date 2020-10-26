@@ -7,6 +7,7 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/perf"
+	"github.com/ably/ably-boomer/tasks"
 	"github.com/ably/ably-boomer/tasks/ably"
 	"github.com/inconshreveable/log15"
 	"github.com/urfave/cli/v2"
@@ -14,7 +15,7 @@ import (
 
 var log = log15.New()
 
-func run(taskFn func(), c *cli.Context) error {
+func runWithBoomer(taskFn func(), c *cli.Context) error {
 	taskName := c.Command.Name
 
 	task := &boomer.Task{
@@ -41,27 +42,20 @@ func run(taskFn func(), c *cli.Context) error {
 	return nil
 }
 
-func runAbly(c *cli.Context) error {
-	apiKey := c.String(apiKeyFlag.Name)
-	env := c.String(envFlag.Name)
-	channelName := c.String(channelNameFlag.Name)
-	numChannels := c.Int(numChannelsFlag.Name)
-	msgDataLength := c.Int(msgDataLengthFlag.Name)
-	sseSubscriber := c.Bool(sseSubscriberFlag.Name)
-	numSubscriptions := c.Int(numSubscriptionsFlag.Name)
-	publishInterval := c.Int(publishIntervalFlag.Name)
-	task := ably.NewTask(ably.Conf{
-		Logger:           log,
-		APIKey:           apiKey,
-		Env:              env,
-		ChannelName:      channelName,
-		NumChannels:      numChannels,
-		MsgDataLength:    msgDataLength,
-		SSESubscriber:    sseSubscriber,
-		NumSubscriptions: numSubscriptions,
-		PublishInterval:  publishInterval,
-	})
-	return run(func() { task.Run() }, c)
+func ablyAction(c *cli.Context) error {
+	return runWithBoomer(ably.TaskFn(log, parseConf(c)), c)
+}
+
+func parseConf(c *cli.Context) tasks.Conf {
+	return tasks.Conf{
+		APIKey:           c.String(apiKeyFlag.Name),
+		Env:              c.String(envFlag.Name),
+		NumChannels:      c.Int(numChannelsFlag.Name),
+		MsgDataLength:    c.Int(msgDataLengthFlag.Name),
+		SSESubscriber:    c.Bool(sseSubscriberFlag.Name),
+		NumSubscriptions: c.Int(numSubscriptionsFlag.Name),
+		PublishInterval:  c.Int(publishIntervalFlag.Name),
+	}
 }
 
 func main() {
@@ -75,11 +69,10 @@ func main() {
 				Name:    "ably",
 				Aliases: []string{"a"},
 				Usage:   "run an Ably Runtime task",
-				Action:  runAbly,
+				Action:  ablyAction,
 				Flags: []cli.Flag{
 					apiKeyFlag,
 					envFlag,
-					channelNameFlag,
 					numChannelsFlag,
 					msgDataLengthFlag,
 					sseSubscriberFlag,

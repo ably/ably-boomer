@@ -20,6 +20,6 @@ WORKDIR /opt/ably
 
 USER ably
 
-COPY --from=builder /opt/ably/ably-boomer /opt/ably/ably-boomer
+COPY --from=builder /opt/ably/bin/ably-boomer /opt/ably/ably-boomer
 
 ENTRYPOINT ["./ably-boomer"]
