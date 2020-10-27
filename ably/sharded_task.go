@@ -89,7 +89,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 		channel := client.Channels.Get(channelName)
 		defer channel.Close()
 
-		delay := i * 400
+		delay := i * (testConfig.PublishInterval * 1000) / testConfig.NumChannels
 
 		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
 		wg.Add(1)
