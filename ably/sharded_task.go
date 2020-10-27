@@ -18,8 +18,8 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 	log := log.New("channel", channel.Name)
 	log.Info("creating publisher", "period", testConfig.PublishInterval)
 
-	log.Info("introducing random delay before starting to publish", "seconds", delay)
-	time.Sleep(time.Duration(delay) * time.Second)
+	log.Info("introducing random delay before starting to publish", "milliseconds", delay)
+	time.Sleep(time.Duration(delay) * time.Millisecond)
 	log.Info("continuing after random delay")
 
 	data := randomString(testConfig.MessageDataLength)
@@ -45,7 +45,7 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 			data := randomString(testConfig.MessageDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
-			log.Info("publishing message", "size", len(data))
+			log.Info("publishing message", "size", len(data), "millisecondTimestamp", millisecondTimestamp())
 			if err := publishWithRetries(channel, timePublished, data); err != nil {
 				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
@@ -89,7 +89,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 		channel := client.Channels.Get(channelName)
 		defer channel.Close()
 
-		delay := i % testConfig.PublishInterval
+		delay := i * 400
 
 		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
 		wg.Add(1)
