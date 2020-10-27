@@ -36,7 +36,7 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 		boomer.RecordSuccess("ably", "publish", 0, 0)
 	}
 
-	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
@@ -89,7 +89,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 		channel := client.Channels.Get(channelName)
 		defer channel.Close()
 
-		delay := i * (testConfig.PublishInterval * 1000) / testConfig.NumChannels
+		delay := i * testConfig.PublishInterval / testConfig.NumChannels
 
 		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
 		wg.Add(1)
