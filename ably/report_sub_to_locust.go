@@ -12,9 +12,15 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Conn, errorChannel chan<- error, wg *sync.WaitGroup, log log15.Logger) {
-	connectionStateChannel := make(chan ably.State)
-	conn.On(connectionStateChannel)
+func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Connection, errorChannel chan<- error, wg *sync.WaitGroup, log log15.Logger) {
+	connectionStateChannel := make(chan ably.ConnectionStateChange)
+	off := conn.OnAll(func(event ably.ConnectionStateChange) {
+		select {
+		case connectionStateChannel <- event:
+		case <-ctx.Done():
+		}
+	})
+	defer off()
 
 	var lastDisconnectTime int64 = 0
 
@@ -32,13 +38,13 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 				"connection state changed",
 				"id", conn.ID(),
 				"key", conn.Key(),
-				"state", connState.State,
-				"err", connState.Err,
+				"event", connState.Event,
+				"err", connState.Reason,
 			)
 
-			if connState.State == ably.StateConnDisconnected {
+			if connState.Event == ably.ConnectionEventDisconnected {
 				lastDisconnectTime = millisecondTimestamp()
-			} else if connState.State == ably.StateConnConnected && lastDisconnectTime != 0 {
+			} else if connState.Event == ably.ConnectionEventConnected && lastDisconnectTime != 0 {
 				timeDisconnected := millisecondTimestamp() - lastDisconnectTime
 
 				log.Info("reporting reconnect time", "id", conn.ID(), "duration", timeDisconnected)

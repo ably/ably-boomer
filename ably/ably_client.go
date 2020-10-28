@@ -10,11 +10,11 @@ import (
 // to avoid transient connection errors being reported as failures.
 //
 // TODO: remove the retries once handled by ably-go.
-func newAblyClient(testConfig TestConfig) (client *ably.RealtimeClient, err error) {
+func newAblyClient(testConfig TestConfig) (client *ably.Realtime, err error) {
 	options := ably.NewClientOptions(testConfig.APIKey)
-	options.Environment = testConfig.Env
+	options.Environment(testConfig.Env)
 
-	client, err = ably.NewRealtimeClient(options)
+	client, err = ably.NewRealtime(options)
 	if err == nil {
 		return
 	}
@@ -30,7 +30,7 @@ func newAblyClient(testConfig TestConfig) (client *ably.RealtimeClient, err erro
 	}
 	for _, delay := range delays {
 		time.Sleep(delay)
-		client, err = ably.NewRealtimeClient(options)
+		client, err = ably.NewRealtime(options)
 		if err == nil {
 			return
 		}

@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"sync"
-	"regexp"
 
 	"github.com/ably-forks/boomer"
 )
@@ -48,7 +48,6 @@ func compositeTask(testConfig TestConfig) {
 	shardedChannelName := generateShardedChannelName(testConfig, userNumber)
 
 	shardedChannel := client.Channels.Get(shardedChannelName)
-	defer shardedChannel.Close()
 
 	log.Info("creating sharded channel subscriber", "name", shardedChannelName)
 	shardedSub, err := shardedChannel.Subscribe()
@@ -66,7 +65,6 @@ func compositeTask(testConfig TestConfig) {
 
 	personalChannelName := randomString(100)
 	personalChannel := client.Channels.Get(personalChannelName)
-	defer personalChannel.Close()
 
 	log.Info("creating personal subscribers", "channel", personalChannelName, "count", testConfig.NumSubscriptions)
 	for i := 0; i < testConfig.NumSubscriptions; i++ {

@@ -19,7 +19,6 @@ func fanOutTask(testConfig TestConfig) {
 	defer client.Close()
 
 	channel := client.Channels.Get(testConfig.ChannelName)
-	defer channel.Close()
 
 	log.Info("creating subscriber", "name", testConfig.ChannelName)
 	sub, err := channel.Subscribe()

@@ -87,7 +87,6 @@ func shardedPublisherTask(testConfig TestConfig) {
 		channelName := generateChannelName(testConfig, i)
 
 		channel := client.Channels.Get(channelName)
-		defer channel.Close()
 
 		delay := i * testConfig.PublishInterval / testConfig.NumChannels
 
@@ -117,7 +116,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 	errorChannel := make(chan error)
 	var wg sync.WaitGroup
 
-	clients := []ably.RealtimeClient{}
+	clients := []ably.Realtime{}
 
 	log.Info("creating subscribers", "count", testConfig.NumSubscriptions)
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
@@ -139,7 +138,6 @@ func shardedSubscriberTask(testConfig TestConfig) {
 			channelName := generateChannelName(testConfig, i)
 
 			channel := client.Channels.Get(channelName)
-			defer channel.Close()
 
 			log.Info("creating subscriber", "num", i+1, "name", channelName)
 			sub, err := channel.Subscribe()

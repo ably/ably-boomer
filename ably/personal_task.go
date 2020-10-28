@@ -46,7 +46,7 @@ func personalTask(testConfig TestConfig) {
 
 	channelName := randomString(channelNameLength)
 
-	subClients := []ably.RealtimeClient{}
+	subClients := []ably.Realtime{}
 
 	log.Info("creating subscribers", "channel", channelName, "count", testConfig.NumSubscriptions)
 	for i := 0; i < testConfig.NumSubscriptions; i++ {
@@ -66,7 +66,6 @@ func personalTask(testConfig TestConfig) {
 			subClients = append(subClients, *subClient)
 
 			channel := subClient.Channels.Get(channelName)
-			defer channel.Close()
 
 			log.Info("creating subscriber", "num", i+1, "channel", channelName)
 			sub, err := channel.Subscribe()
@@ -92,7 +91,6 @@ func personalTask(testConfig TestConfig) {
 	defer publishClient.Close()
 
 	channel := publishClient.Channels.Get(channelName)
-	defer channel.Close()
 
 	cleanup := func() {
 		publishClient.Close()
