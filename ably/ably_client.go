@@ -6,8 +6,9 @@ import (
 
 // newAblyClient creates a new Ably realtime client.
 func newAblyClient(testConfig TestConfig) (*ably.Realtime, error) {
-	options := ably.NewClientOptions(testConfig.APIKey)
-	options.Environment(testConfig.Env)
+	options := ably.ClientOptions{}.
+		Key(testConfig.APIKey).
+		Environment(testConfig.Env)
 
 	return ably.NewRealtime(options)
 }
