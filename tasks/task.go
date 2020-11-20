@@ -4,27 +4,50 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/config"
+	"github.com/ably/ably-boomer/perf"
 	"github.com/ably/ably-go/ably/proto"
 	"github.com/inconshreveable/log15"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/atomic"
 	"golang.org/x/sync/errgroup"
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-// Conf is the task's configuration.
-type Conf struct {
-	APIKey           string
-	Env              string
-	NumChannels      int
-	MsgDataLength    int
-	SSESubscriber    bool
-	NumSubscriptions int
-	PublishInterval  int
+func RunWithBoomer(log log15.Logger, taskFn func(), c *cli.Context) error {
+	taskName := c.Command.Name
+
+	task := &boomer.Task{
+		Name: taskName,
+		Fn:   taskFn,
+	}
+
+	log.Info("starting perf")
+	perf := perf.New(perf.Conf{
+		CPUProfileDir: c.Path(config.CPUProfileDirFlag.Name),
+		S3Bucket:      c.String(config.S3BucketFlag.Name),
+	})
+	if err := perf.Start(); err != nil {
+		log.Crit("error starting perf", "err", err)
+		os.Exit(1)
+	}
+	defer perf.Stop()
+
+	log.Info("running ably-boomer", "task name", taskName)
+	log.Info("running boomer-internal", "task name", taskName)
+	os.Args = []string{"boomer",
+		"-master-version-0.9.0",
+		"-master-host", c.String(config.LocustHostFlag.Name),
+		"-master-port", strconv.Itoa(c.Int(config.LocustPortFlag.Name))}
+	boomer.Run(task)
+
+	return nil
 }
 
 // Publisher represents something that publishes data to a channel or stream.
@@ -56,7 +79,7 @@ type SubscriberFactory interface {
 
 // Task is a performance job that runs a collection of generic publishers and subscribers.
 type Task struct {
-	conf        Conf
+	conf        config.Conf
 	userCounter atomic.Int64
 	taskID      int
 	subF        SubscriberFactory
@@ -66,7 +89,7 @@ type Task struct {
 }
 
 // NewTask returns a new task.
-func NewTask(log log15.Logger, conf Conf, subF SubscriberFactory, pubf PublisherFactory) *Task {
+func NewTask(log log15.Logger, conf config.Conf, subF SubscriberFactory, pubf PublisherFactory) *Task {
 	return &Task{
 		conf:   conf,
 		taskID: rand.Int(),

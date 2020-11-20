@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ably/ably-boomer/config"
 	"github.com/ably/ably-boomer/tasks"
 	"github.com/ably/ably-go/ably"
 	"github.com/ably/ably-go/ably/proto"
@@ -11,7 +12,7 @@ import (
 )
 
 // TaskFn creates an Ably task to run with boomer.
-func TaskFn(log log15.Logger, conf tasks.Conf) func() {
+func TaskFn(log log15.Logger, conf config.Conf) func() {
 	return func() {
 		f, err := newFactory(conf)
 		if err != nil {
@@ -33,7 +34,7 @@ type factory struct {
 	*ably.RealtimeClient
 }
 
-func newFactory(conf tasks.Conf) (*factory, error) {
+func newFactory(conf config.Conf) (*factory, error) {
 	c, err := newAblyClient(conf.APIKey, conf.Env)
 	if err != nil {
 		return nil, err
