@@ -20,7 +20,7 @@ var (
 		Name:    "publish-interval",
 		EnvVars: []string{"ABLY_PUBLISH_INTERVAL"},
 		Value:   10,
-		Usage:   "The number of seconds to wait between publishing messages.",
+		Usage:   "The number of milliseconds to wait between publishing messages.",
 	}
 	NumSubscriptionsFlag = &cli.IntFlag{
 		Name:    "num-subscriptions",
@@ -51,7 +51,7 @@ var (
 	CPUProfileDirFlag = &cli.PathFlag{
 		Name:    "cpu-profile-dir",
 		EnvVars: []string{"PERF_CPU_PROFILE_DIR"},
-		Usage:   "The directorty path to write the pprof cpu profile.",
+		Usage:   "The directory path to write the pprof cpu profile.",
 	}
 	S3BucketFlag = &cli.StringFlag{
 		Name:    "s3-bucket",
