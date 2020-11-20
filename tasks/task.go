@@ -211,7 +211,7 @@ func (t *Task) publishLoop(ctx context.Context, channelName string, interval, ms
 		return err
 	}
 
-	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
