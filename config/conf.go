@@ -46,6 +46,18 @@ var (
 		Value:   false,
 		Usage:   "Whether to subscribe using SSE.",
 	}
+	ShardedLoadFlag = &cli.BoolFlag{
+		Name:    "sharded-load",
+		EnvVars: []string{"SHARDED_LOAD"},
+		Value:   true,
+		Usage:   "Whether to run sharded load",
+	}
+	PersonalLoadFlag = &cli.BoolFlag{
+		Name:    "personal-load",
+		EnvVars: []string{"PERSONAL_LOAD"},
+		Value:   true,
+		Usage:   "Whether to run personal load",
+	}
 
 	// Perf.
 	CPUProfileDirFlag = &cli.PathFlag{
@@ -72,7 +84,7 @@ var (
 		Value:   5557,
 	}
 )
-var TaskFlags  = []cli.Flag{
+var TaskFlags = []cli.Flag{
 	EnvFlag,
 	APIKeyFlag,
 	PublishIntervalFlag,
@@ -82,6 +94,8 @@ var TaskFlags  = []cli.Flag{
 	SSESubscriberFlag,
 	CPUProfileDirFlag,
 	S3BucketFlag,
+	PersonalLoadFlag,
+	ShardedLoadFlag,
 }
 
 var CommonFlags = []cli.Flag{
@@ -98,6 +112,8 @@ type Conf struct {
 	SSESubscriber    bool
 	NumSubscriptions int
 	PublishInterval  int
+	PersonalLoad     bool
+	ShardedLoad      bool
 }
 
 func ParseConf(c *cli.Context) Conf {
@@ -109,5 +125,7 @@ func ParseConf(c *cli.Context) Conf {
 		SSESubscriber:    c.Bool(SSESubscriberFlag.Name),
 		NumSubscriptions: c.Int(NumSubscriptionsFlag.Name),
 		PublishInterval:  c.Int(PublishIntervalFlag.Name),
+		PersonalLoad:     c.Bool(PersonalLoadFlag.Name),
+		ShardedLoad:      c.Bool(ShardedLoadFlag.Name),
 	}
 }

@@ -118,14 +118,18 @@ func (t *Task) Run() {
 
 	t.userCounter.Add(1)
 
-	if err := t.shardedLoad(ctx, errGroup); err != nil {
-		log.Error("starting sharded load", "err", err)
-		return
+	if t.conf.ShardedLoad {
+		if err := t.shardedLoad(ctx, errGroup); err != nil {
+			log.Error("starting sharded load", "err", err)
+			return
+		}
 	}
 
-	if err := t.personalLoad(ctx, errGroup); err != nil {
-		log.Error("starting personal load", "err", err)
-		return
+	if t.conf.PersonalLoad {
+		if err := t.personalLoad(ctx, errGroup); err != nil {
+			log.Error("starting personal load", "err", err)
+			return
+		}
 	}
 
 	if err := errGroup.Wait(); err != nil {
