@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/ably/ably-boomer/config"
 	"github.com/ably/ably-boomer/tasks"
 	"github.com/ably/ably-go/ably/proto"
 	"github.com/r3labs/sse"
@@ -36,10 +37,10 @@ func (wc *wrappedSSEClient) Subscribe(ctx context.Context, msgHandler func(messa
 }
 
 type sseSubscriberFactory struct {
-	conf tasks.Conf
+	conf config.Conf
 }
 
-func newSSESubscriberFactory(conf tasks.Conf) *sseSubscriberFactory {
+func newSSESubscriberFactory(conf config.Conf) *sseSubscriberFactory {
 	return &sseSubscriberFactory{conf}
 }
 
