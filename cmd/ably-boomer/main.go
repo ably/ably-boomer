@@ -15,7 +15,11 @@ import (
 var log = log15.New()
 
 func ablyAction(c *cli.Context) error {
-	return tasks.RunWithBoomer(log, ably.TaskFn(log, config.ParseConf(c)), c)
+	taskFn, err := ably.TaskFn(log, config.ParseConf(c))
+	if err != nil {
+		return err
+	}
+	return tasks.RunWithBoomer(log, taskFn, c)
 }
 
 func main() {

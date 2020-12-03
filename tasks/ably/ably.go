@@ -12,13 +12,12 @@ import (
 )
 
 // TaskFn creates an Ably task to run with boomer.
-func TaskFn(log log15.Logger, conf config.Conf) func() {
+func TaskFn(log log15.Logger, conf config.Conf) (func(), error) {
+	f, err := newFactory(conf)
+	if err != nil {
+		return nil, err
+	}
 	return func() {
-		f, err := newFactory(conf)
-		if err != nil {
-			log.Crit("connecting to realtime", "err", err)
-			return
-		}
 		defer f.Close()
 
 		var sf tasks.SubscriberFactory = f
@@ -27,7 +26,7 @@ func TaskFn(log log15.Logger, conf config.Conf) func() {
 		}
 
 		tasks.NewTask(log, conf, sf, f).Run()
-	}
+	}, nil
 }
 
 type factory struct {
