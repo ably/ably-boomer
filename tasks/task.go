@@ -208,13 +208,23 @@ func (t *Task) validateMsg(msg *proto.Message) {
 func (t *Task) publishLoop(ctx context.Context, channelName string, interval, msgDataLength int) error {
 	log := t.log.New("channel", channelName)
 	log.Info("creating publisher", "period", interval)
-	p, err := t.pubF.NewPublisher(ctx, channelName)
-	if err != nil {
-		log.Error("creating publisher", "err", err)
-		boomer.RecordFailure("publish", "create publisher", 0, err.Error())
-		return err
-	}
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
 
+		p, err := t.pubF.NewPublisher(ctx, channelName)
+		if err != nil {
+			log.Error("creating publisher", "err", err)
+			boomer.RecordFailure("publish", "create publisher", 0, err.Error())
+			return err
+		}
+
+		t.publishOnInterval(ctx, interval, msgDataLength, log, p)
+	}
+}
+
+func (t *Task) publishOnInterval(ctx context.Context, interval int, msgDataLength int, log log15.Logger, p Publisher) {
 	ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -229,11 +239,11 @@ func (t *Task) publishLoop(ctx context.Context, channelName string, interval, ms
 			if err := p.Publish(ctx, msg); err != nil {
 				log.Error("publishing message", "err", err)
 				boomer.RecordFailure("publish", "publishing", 0, err.Error())
-				return err
+				return
 			}
 			boomer.RecordSuccess("publish", "message", 0, 0)
 		case <-ctx.Done():
-			return ctx.Err()
+			return
 		}
 	}
 }
