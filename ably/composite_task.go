@@ -1,4 +1,4 @@
-package main
+package ably
 
 import (
 	"context"
@@ -8,10 +8,12 @@ import (
 	"sync"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/config"
+	"github.com/inconshreveable/log15"
 )
 
-func generateShardedChannelName(testConfig TestConfig, number int) string {
-	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
+func generateShardedChannelName(config *config.Config, number int) string {
+	return "sharded-test-channel-" + strconv.Itoa(number%config.NumChannels)
 }
 
 var compositeUserCounter int
@@ -19,7 +21,7 @@ var compositeUserMutex sync.Mutex
 
 var errorMsgTimestampRegex = regexp.MustCompile(`tamp=[0-9]+`)
 
-func compositeTask(testConfig TestConfig) {
+func compositeTask(config *config.Config, log log15.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -29,7 +31,7 @@ func compositeTask(testConfig TestConfig) {
 	errorChannel := make(chan error)
 
 	log.Info("creating realtime connection")
-	client, err := newAblyClient(testConfig)
+	client, err := newAblyClient(config, log)
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
 
@@ -45,7 +47,7 @@ func compositeTask(testConfig TestConfig) {
 	userNumber := compositeUserCounter
 	compositeUserMutex.Unlock()
 
-	shardedChannelName := generateShardedChannelName(testConfig, userNumber)
+	shardedChannelName := generateShardedChannelName(config, userNumber)
 
 	shardedChannel := client.Channels.Get(shardedChannelName)
 
@@ -66,8 +68,8 @@ func compositeTask(testConfig TestConfig) {
 	personalChannelName := randomString(100)
 	personalChannel := client.Channels.Get(personalChannelName)
 
-	log.Info("creating personal subscribers", "channel", personalChannelName, "count", testConfig.NumSubscriptions)
-	for i := 0; i < testConfig.NumSubscriptions; i++ {
+	log.Info("creating personal subscribers", "channel", personalChannelName, "count", config.NumSubscriptions)
+	for i := 0; i < config.NumSubscriptions; i++ {
 		log.Info("creating personal subscriber", "num", i+1, "name", personalChannelName)
 		personalSub, err := personalChannel.Subscribe()
 		if err != nil {
@@ -82,7 +84,7 @@ func compositeTask(testConfig TestConfig) {
 
 	log.Info("creating personal publisher", "channel", personalChannelName)
 	wg.Add(1)
-	go publishOnInterval(ctx, testConfig, personalChannel, rand.Intn(testConfig.PublishInterval), errorChannel, &wg)
+	go publishOnInterval(ctx, config, personalChannel, rand.Intn(config.PublishInterval), errorChannel, &wg, log)
 
 	select {
 	case err := <-errorChannel:
@@ -99,16 +101,16 @@ func compositeTask(testConfig TestConfig) {
 	}
 }
 
-func curryCompositeTask(testConfig TestConfig) func() {
+func curryCompositeTask(config *config.Config, log log15.Logger) func() {
 	log.Info(
 		"starting composite task",
-		"env", testConfig.Env,
-		"num-channels", testConfig.NumChannels,
-		"subs-per-channel", testConfig.NumSubscriptions,
-		"publish-interval", testConfig.PublishInterval,
+		"env", config.Env,
+		"num-channels", config.NumChannels,
+		"subs-per-channel", config.NumSubscriptions,
+		"publish-interval", config.PublishInterval,
 	)
 
 	return func() {
-		compositeTask(testConfig)
+		compositeTask(config, log)
 	}
 }

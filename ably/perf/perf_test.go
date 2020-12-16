@@ -11,14 +11,9 @@ import (
 
 func TestNewPerf(t *testing.T) {
 	t.Run("perf works with sensible defaults", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
+		config := &Config{
+			CPUProfileDir: os.TempDir(),
+			S3Bucket:      "ably-logs-dev",
 		}
 
 		s3Client := &mockS3{}
@@ -147,13 +142,8 @@ func TestNewPerf(t *testing.T) {
 	})
 
 	t.Run("perf does not write to s3 unless configured", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
+		config := &Config{
+			CPUProfileDir: os.TempDir(),
 		}
 
 		s3Client := &mockS3{}
@@ -205,24 +195,7 @@ func TestNewPerf(t *testing.T) {
 	})
 
 	t.Run("perf doesn't run by default", func(ts *testing.T) {
-		// Check that the environment doesn't contain perf configuration
-		profileDir, profileDirSet := os.LookupEnv("PERF_CPU_PROFILE_DIR")
-		if profileDirSet && profileDir != "" {
-			ts.Fatalf(
-				"PERF_CPU_PROFILE_DIR env is currently set: %s",
-				profileDir,
-			)
-		}
-
-		bucket, bucketSet := os.LookupEnv("PERF_CPU_S3_BUCKET")
-		if bucketSet && bucket != "" {
-			ts.Fatalf(
-				"PERF_CPU_S3_BUCKET env is currently set: %s",
-				bucket,
-			)
-		}
-
-		perf := New()
+		perf := New(DefaultConfig())
 		perf.Start()
 		defer func() {
 			err := perf.Stop()
@@ -249,14 +222,9 @@ func TestNewPerf(t *testing.T) {
 	})
 
 	t.Run("perf defaults to real s3 client", func(ts *testing.T) {
-		var testEnv testEnvMap = map[string]string{
-			"PERF_CPU_PROFILE_DIR": os.TempDir(),
-			"PERF_CPU_S3_BUCKET":   "ably-logs-dev",
-		}
-
-		config, configErr := NewConfig(testEnv.LookupEnv)
-		if configErr != nil {
-			ts.Fatalf("failed to initialize perf config: %s", configErr)
+		config := &Config{
+			CPUProfileDir: os.TempDir(),
+			S3Bucket:      "ably-logs-dev",
 		}
 
 		perf := NewWithS3(config, nil)

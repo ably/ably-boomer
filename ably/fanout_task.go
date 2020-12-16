@@ -1,4 +1,4 @@
-package main
+package ably
 
 import (
 	"context"
@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/config"
+	"github.com/inconshreveable/log15"
 )
 
-func fanOutTask(testConfig TestConfig) {
+func fanOutTask(config *config.Config, log log15.Logger) {
 	log.Info("creating realtime connection")
-	client, err := newAblyClient(testConfig)
+	client, err := newAblyClient(config, log)
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -18,12 +20,12 @@ func fanOutTask(testConfig TestConfig) {
 	}
 	defer client.Close()
 
-	channel := client.Channels.Get(testConfig.ChannelName)
+	channel := client.Channels.Get(config.ChannelName)
 
-	log.Info("creating subscriber", "name", testConfig.ChannelName)
+	log.Info("creating subscriber", "name", config.ChannelName)
 	sub, err := channel.Subscribe()
 	if err != nil {
-		log.Error("error creating subscriber", "name", testConfig.ChannelName, "err", err)
+		log.Error("error creating subscriber", "name", config.ChannelName, "err", err)
 		boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 		return
 	}
@@ -38,7 +40,7 @@ func fanOutTask(testConfig TestConfig) {
 	errorChannel := make(chan error)
 
 	wg.Add(1)
-	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg, log.New("channel", testConfig.ChannelName))
+	go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg, log.New("channel", config.ChannelName))
 
 	select {
 	case err := <-errorChannel:
@@ -55,15 +57,15 @@ func fanOutTask(testConfig TestConfig) {
 	}
 }
 
-func curryFanOutTask(testConfig TestConfig) func() {
+func curryFanOutTask(config *config.Config, log log15.Logger) func() {
 	log.Info(
 		"starting fanout task",
-		"env", testConfig.Env,
-		"channel", testConfig.ChannelName,
+		"env", config.Env,
+		"channel", config.ChannelName,
 	)
 
 	return func() {
-		fanOutTask(testConfig)
+		fanOutTask(config, log)
 	}
 }
 

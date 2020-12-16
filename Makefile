@@ -19,9 +19,9 @@ image:
 push:
 	docker push $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG)
 
-build:
+build: $(BIN)
 	go vet ./ably
-	go build -o ably-boomer ./ably
+	go build -o bin/ably-boomer ./cmd/ably-boomer
 
 cover: lint
 	mkdir -p ./coverage

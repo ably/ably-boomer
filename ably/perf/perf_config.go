@@ -1,7 +1,6 @@
 package perf
 
-const defaultCPUProfileDir = ""
-const defaultS3Bucket = ""
+import "github.com/urfave/cli/v2"
 
 // Config configures the internal profilers for measuring performance and
 // latency information directly from the client
@@ -10,26 +9,28 @@ type Config struct {
 	S3Bucket      string
 }
 
-// LookupEnvFunc is an environment lookup function to determin envionment
-// configuration
-type LookupEnvFunc func(key string) (string, bool)
-
-// NewConfig initializes a perf Config from the supplied environment
-func NewConfig(lookupEnv LookupEnvFunc) (*Config, error) {
-	config := &Config{
-		CPUProfileDir: defaultCPUProfileDir,
-		S3Bucket:      defaultS3Bucket,
+func DefaultConfig() *Config {
+	return &Config{
+		CPUProfileDir: "",
+		S3Bucket:      "",
 	}
+}
 
-	cpuProfile, cpuProfileExists := lookupEnv("PERF_CPU_PROFILE_DIR")
-	if cpuProfileExists {
-		config.CPUProfileDir = cpuProfile
+func (c *Config) Flags() []cli.Flag {
+	return []cli.Flag{
+		&cli.PathFlag{
+			Name:        "cpu-profile-dir",
+			Value:       c.CPUProfileDir,
+			Destination: &c.CPUProfileDir,
+			EnvVars:     []string{"PERF_CPU_PROFILE_DIR"},
+			Usage:       "The directory path to write the pprof cpu profile.",
+		},
+		&cli.StringFlag{
+			Name:        "s3-bucket",
+			Value:       c.S3Bucket,
+			Destination: &c.S3Bucket,
+			EnvVars:     []string{"PERF_CPU_S3_BUCKET"},
+			Usage:       "The name of the s3 bucket to upload pprof data to.",
+		},
 	}
-
-	s3Bucket, s3BucketExists := lookupEnv("PERF_CPU_S3_BUCKET")
-	if s3BucketExists {
-		config.S3Bucket = s3Bucket
-	}
-
-	return config, nil
 }

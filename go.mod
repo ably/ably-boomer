@@ -11,6 +11,7 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/inconshreveable/log15 v0.0.0-20200109203555-b30bc20e4fd1
 	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/zeromq/goczmq v4.1.0+incompatible // indirect
 	golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f // indirect
 )

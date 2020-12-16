@@ -32,9 +32,11 @@ type Perf struct {
 // Only allow alphanumeric chars, - _ and . in file names
 var replaceChars = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 
-// New creates a new instance of a Perf with defaults
-func New() *Perf {
-	return &Perf{}
+// New creates a new instance of a Perf with the given config.
+func New(config *Config) *Perf {
+	return &Perf{
+		config: config,
+	}
 }
 
 // NewWithS3 creates a new instance of a Perf with defaults and a supplied S3
@@ -54,13 +56,7 @@ func (p *Perf) Start() error {
 	}
 
 	if p.config == nil {
-		perfConfig, perfConfigErr := NewConfig(os.LookupEnv)
-
-		if perfConfigErr != nil {
-			return perfConfigErr
-		}
-
-		p.config = perfConfig
+		p.config = DefaultConfig()
 	}
 
 	if p.config.CPUProfileDir == "" {

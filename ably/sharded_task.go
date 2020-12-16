@@ -1,4 +1,4 @@
-package main
+package ably
 
 import (
 	"context"
@@ -7,26 +7,28 @@ import (
 	"time"
 
 	"github.com/ably-forks/boomer"
+	"github.com/ably/ably-boomer/config"
 	"github.com/ably/ably-go/ably"
+	"github.com/inconshreveable/log15"
 )
 
-func generateChannelName(testConfig TestConfig, number int) string {
-	return "sharded-test-channel-" + strconv.Itoa(number%testConfig.NumChannels)
+func generateChannelName(config *config.Config, number int) string {
+	return "sharded-test-channel-" + strconv.Itoa(number%config.NumChannels)
 }
 
-func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably.RealtimeChannel, delay int, errorChannel chan<- error, wg *sync.WaitGroup) {
-	log := log.New("channel", channel.Name)
-	log.Info("creating publisher", "period", testConfig.PublishInterval)
+func publishOnInterval(ctx context.Context, config *config.Config, channel *ably.RealtimeChannel, delay int, errorChannel chan<- error, wg *sync.WaitGroup, log log15.Logger) {
+	log = log.New("channel", channel.Name)
+	log.Info("creating publisher", "period", config.PublishInterval)
 
 	log.Info("introducing random delay before starting to publish", "milliseconds", delay)
 	time.Sleep(time.Duration(delay) * time.Millisecond)
 	log.Info("continuing after random delay")
 
-	data := randomString(testConfig.MessageDataLength)
+	data := randomString(config.MessageDataLength)
 	timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 	log.Info("publishing message", "size", len(data))
-	if err := publishWithRetries(channel, timePublished, data); err != nil {
+	if err := publishWithRetries(channel, timePublished, data, log); err != nil {
 		log.Error("error publishing message", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
 		errorChannel <- err
@@ -36,17 +38,17 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 		boomer.RecordSuccess("ably", "publish", 0, 0)
 	}
 
-	ticker := time.NewTicker(time.Duration(testConfig.PublishInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(config.PublishInterval) * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			data := randomString(testConfig.MessageDataLength)
+			data := randomString(config.MessageDataLength)
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data), "millisecondTimestamp", millisecondTimestamp())
-			if err := publishWithRetries(channel, timePublished, data); err != nil {
+			if err := publishWithRetries(channel, timePublished, data, log); err != nil {
 				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
 				errorChannel <- err
@@ -64,7 +66,7 @@ func publishOnInterval(ctx context.Context, testConfig TestConfig, channel *ably
 	}
 }
 
-func shardedPublisherTask(testConfig TestConfig) {
+func shardedPublisherTask(config *config.Config, log log15.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -74,7 +76,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	log.Info("creating realtime connection")
-	client, err := newAblyClient(testConfig)
+	client, err := newAblyClient(config, log)
 	if err != nil {
 		log.Error("error creating realtime connection", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
@@ -82,17 +84,17 @@ func shardedPublisherTask(testConfig TestConfig) {
 	}
 	defer client.Close()
 
-	log.Info("creating publishers", "count", testConfig.NumChannels)
-	for i := 0; i < testConfig.NumChannels; i++ {
-		channelName := generateChannelName(testConfig, i)
+	log.Info("creating publishers", "count", config.NumChannels)
+	for i := 0; i < config.NumChannels; i++ {
+		channelName := generateChannelName(config, i)
 
 		channel := client.Channels.Get(channelName)
 
-		delay := i * testConfig.PublishInterval / testConfig.NumChannels
+		delay := i * config.PublishInterval / config.NumChannels
 
 		log.Info("starting publisher", "num", i+1, "channel", channelName, "delay", delay)
 		wg.Add(1)
-		go publishOnInterval(ctx, testConfig, channel, delay, errorChannel, &wg)
+		go publishOnInterval(ctx, config, channel, delay, errorChannel, &wg, log)
 	}
 
 	select {
@@ -100,7 +102,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 		log.Error("error from publisher goroutine", "err", err)
 		cancel()
 		client.Close()
-		shardedPublisherTask(testConfig)
+		shardedPublisherTask(config, log)
 	case <-ctx.Done():
 		log.Info("sharded publisher task context done, cleaning up")
 		cancel()
@@ -109,7 +111,7 @@ func shardedPublisherTask(testConfig TestConfig) {
 	}
 }
 
-func shardedSubscriberTask(testConfig TestConfig) {
+func shardedSubscriberTask(config *config.Config, log log15.Logger) {
 	ctx, cancel := context.WithCancel(context.Background())
 	boomer.Events.Subscribe("boomer:stop", cancel)
 
@@ -118,14 +120,14 @@ func shardedSubscriberTask(testConfig TestConfig) {
 
 	clients := []ably.Realtime{}
 
-	log.Info("creating subscribers", "count", testConfig.NumSubscriptions)
-	for i := 0; i < testConfig.NumSubscriptions; i++ {
+	log.Info("creating subscribers", "count", config.NumSubscriptions)
+	for i := 0; i < config.NumSubscriptions; i++ {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			log.Info("creating realtime connection", "num", i+1)
-			client, err := newAblyClient(testConfig)
+			client, err := newAblyClient(config, log)
 			if err != nil {
 				log.Error("error creating realtime connection", "num", i+1, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
@@ -135,7 +137,7 @@ func shardedSubscriberTask(testConfig TestConfig) {
 
 			clients = append(clients, *client)
 
-			channelName := generateChannelName(testConfig, i)
+			channelName := generateChannelName(config, i)
 
 			channel := client.Channels.Get(channelName)
 
@@ -172,27 +174,27 @@ func shardedSubscriberTask(testConfig TestConfig) {
 	}
 }
 
-func curryShardedTask(testConfig TestConfig) func() {
-	if testConfig.Publisher {
+func curryShardedTask(config *config.Config, log log15.Logger) func() {
+	if config.Publisher {
 		log.Info(
 			"starting sharded publisher task",
-			"env", testConfig.Env,
-			"num-channels", testConfig.NumChannels,
-			"publish-interval", testConfig.PublishInterval,
-			"message-size", testConfig.MessageDataLength,
+			"env", config.Env,
+			"num-channels", config.NumChannels,
+			"publish-interval", config.PublishInterval,
+			"message-size", config.MessageDataLength,
 		)
 		return func() {
-			shardedPublisherTask(testConfig)
+			shardedPublisherTask(config, log)
 		}
 	}
 
 	log.Info(
 		"starting sharded subscriber task",
-		"env", testConfig.Env,
-		"num-channels", testConfig.NumChannels,
-		"subs-per-channel", testConfig.NumSubscriptions,
+		"env", config.Env,
+		"num-channels", config.NumChannels,
+		"subs-per-channel", config.NumSubscriptions,
 	)
 	return func() {
-		shardedSubscriberTask(testConfig)
+		shardedSubscriberTask(config, log)
 	}
 }

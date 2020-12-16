@@ -1,14 +1,16 @@
-package main
+package ably
 
 import (
+	"github.com/ably/ably-boomer/config"
 	"github.com/ably/ably-go/ably"
+	"github.com/inconshreveable/log15"
 )
 
 // newAblyClient creates a new Ably realtime client and waits for it to connect.
-func newAblyClient(testConfig TestConfig) (*ably.Realtime, error) {
+func newAblyClient(config *config.Config, log log15.Logger) (*ably.Realtime, error) {
 	options := ably.ClientOptions{}.
-		Key(testConfig.APIKey).
-		Environment(testConfig.Env).
+		Key(config.APIKey).
+		Environment(config.Env).
 		AutoConnect(false)
 
 	client, err := ably.NewRealtime(options)
