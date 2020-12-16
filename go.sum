@@ -10,6 +10,8 @@ github.com/ably/ably-go v1.1.6-0.20201023134633-d652167c4a75 h1:BG7EgRF6XVjDJ10a
 github.com/ably/ably-go v1.1.6-0.20201023134633-d652167c4a75/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/ably/ably-go v1.1.6-0.20201026170008-80f6c2a0ef72 h1:S69FNdiA9hJzXMGcgVVS37dQ6oMpVeNHDjinAVc1ws8=
 github.com/ably/ably-go v1.1.6-0.20201026170008-80f6c2a0ef72/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
+github.com/ably/ably-go v1.2.0-apipreview.3 h1:DPBywW7n30lD0/Od01/J7MneztcdXTdLedOnhyZwVy4=
+github.com/ably/ably-go v1.2.0-apipreview.3/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/andybalholm/brotli v1.0.0/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 h1:LHEOGCi+2CooiWkQB2BlzdMVh6rdRDyt5Wflv4yzvXY=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3/go.mod h1:JS7hed4L1fj0hXcyEejnW57/7LCetXggd+vwrRnYeII=

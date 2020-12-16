@@ -9,6 +9,7 @@ import (
 
 	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/config"
+	"github.com/ably/ably-go/ably"
 	"github.com/inconshreveable/log15"
 )
 
@@ -52,7 +53,13 @@ func compositeTask(config *config.Config, log log15.Logger) {
 	shardedChannel := client.Channels.Get(shardedChannelName)
 
 	log.Info("creating sharded channel subscriber", "name", shardedChannelName)
-	shardedSub, err := shardedChannel.Subscribe()
+	msgC := make(chan *ably.Message)
+	unsub, err := shardedChannel.SubscribeAll(ctx, func(msg *ably.Message) {
+		select {
+		case msgC <- msg:
+		case <-ctx.Done():
+		}
+	})
 	if err != nil {
 		log.Error("error creating sharded channel subscriber", "name", shardedChannelName, "err", err)
 
@@ -61,9 +68,10 @@ func compositeTask(config *config.Config, log log15.Logger) {
 		boomer.RecordFailure("ably", "subscribe", 0, errMsg)
 		return
 	}
+	defer unsub()
 
 	wg.Add(1)
-	go reportSubscriptionToLocust(ctx, shardedSub, client.Connection, errorChannel, &wg, log.New("channel", shardedChannelName))
+	go reportSubscriptionToLocust(ctx, msgC, client.Connection, errorChannel, &wg, log.New("channel", shardedChannelName))
 
 	personalChannelName := randomString(100)
 	personalChannel := client.Channels.Get(personalChannelName)
@@ -71,15 +79,22 @@ func compositeTask(config *config.Config, log log15.Logger) {
 	log.Info("creating personal subscribers", "channel", personalChannelName, "count", config.NumSubscriptions)
 	for i := 0; i < config.NumSubscriptions; i++ {
 		log.Info("creating personal subscriber", "num", i+1, "name", personalChannelName)
-		personalSub, err := personalChannel.Subscribe()
+		msgC := make(chan *ably.Message)
+		unsub, err := personalChannel.SubscribeAll(ctx, func(msg *ably.Message) {
+			select {
+			case msgC <- msg:
+			case <-ctx.Done():
+			}
+		})
 		if err != nil {
 			log.Error("error creating personal subscriber", "num", i+1, "name", personalChannelName, "err", err)
 			boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 			return
 		}
+		defer unsub()
 
 		wg.Add(1)
-		go reportSubscriptionToLocust(ctx, personalSub, client.Connection, errorChannel, &wg, log.New("channel", personalChannelName))
+		go reportSubscriptionToLocust(ctx, msgC, client.Connection, errorChannel, &wg, log.New("channel", personalChannelName))
 	}
 
 	log.Info("creating personal publisher", "channel", personalChannelName)

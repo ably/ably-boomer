@@ -70,16 +70,22 @@ func personalTask(config *config.Config, log log15.Logger) {
 			channel := subClient.Channels.Get(channelName)
 
 			log.Info("creating subscriber", "num", i+1, "channel", channelName)
-			sub, err := channel.Subscribe()
+			msgC := make(chan *ably.Message)
+			unsub, err := channel.SubscribeAll(ctx, func(msg *ably.Message) {
+				select {
+				case msgC <- msg:
+				case <-ctx.Done():
+				}
+			})
 			if err != nil {
 				log.Error("error creating subscriber", "num", i+1, "channel", channelName, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
-			defer sub.Close()
+			defer unsub()
 
 			wg.Add(1)
-			go reportSubscriptionToLocust(ctx, sub, subClient.Connection, errorChannel, &wg, log.New("channel", channelName))
+			go reportSubscriptionToLocust(ctx, msgC, subClient.Connection, errorChannel, &wg, log.New("channel", channelName))
 		}
 	}
 
@@ -121,7 +127,7 @@ func personalTask(config *config.Config, log log15.Logger) {
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data))
-			err := publishWithRetries(channel, timePublished, data, log)
+			err := publishWithRetries(ctx, channel, timePublished, data, log)
 
 			if err != nil {
 				log.Error("error publishing message", "err", err)
@@ -142,11 +148,11 @@ func personalTask(config *config.Config, log log15.Logger) {
 // channel.
 //
 // TODO: remove the retries once handled by ably-go.
-func publishWithRetries(channel *ably.RealtimeChannel, name string, data interface{}, log log15.Logger) (err error) {
+func publishWithRetries(ctx context.Context, channel *ably.RealtimeChannel, name string, data interface{}, log log15.Logger) (err error) {
 	timeout := 30 * time.Second
 	delay := 100 * time.Millisecond
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(delay) {
-		_, err = channel.Publish(name, data)
+		err = channel.Publish(ctx, name, data)
 		if err == nil || !isRetriablePublishError(err) {
 			return
 		}

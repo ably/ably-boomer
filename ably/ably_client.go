@@ -8,12 +8,11 @@ import (
 
 // newAblyClient creates a new Ably realtime client and waits for it to connect.
 func newAblyClient(config *config.Config, log log15.Logger) (*ably.Realtime, error) {
-	options := ably.ClientOptions{}.
-		Key(config.APIKey).
-		Environment(config.Env).
-		AutoConnect(false)
-
-	client, err := ably.NewRealtime(options)
+	client, err := ably.NewRealtime(
+		ably.WithKey(config.APIKey),
+		ably.WithEnvironment(config.Env),
+		ably.WithAutoConnect(false),
+	)
 	if err != nil {
 		return nil, err
 	}

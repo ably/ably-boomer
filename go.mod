@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/ably-forks/boomer v0.0.0-20200717132144-47e73943070d
-	github.com/ably/ably-go v1.1.6-0.20201026170008-80f6c2a0ef72
+	github.com/ably/ably-go v1.2.0-apipreview.3
 	github.com/aws/aws-sdk-go v1.33.17
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect

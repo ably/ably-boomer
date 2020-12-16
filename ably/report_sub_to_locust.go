@@ -12,7 +12,7 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, conn *ably.Connection, errorChannel chan<- error, wg *sync.WaitGroup, log log15.Logger) {
+func reportSubscriptionToLocust(ctx context.Context, msgC chan *ably.Message, conn *ably.Connection, errorChannel chan<- error, wg *sync.WaitGroup, log log15.Logger) {
 	connectionStateChannel := make(chan ably.ConnectionStateChange)
 	off := conn.OnAll(func(event ably.ConnectionStateChange) {
 		select {
@@ -54,7 +54,7 @@ func reportSubscriptionToLocust(ctx context.Context, sub *ably.Subscription, con
 			log.Info("subscriber context done", "id", conn.ID())
 			wg.Done()
 			return
-		case msg, ok := <-sub.MessageChannel():
+		case msg, ok := <-msgC:
 			if !ok {
 				log.Warn("subscriber message channel closed", "id", conn.ID())
 				err := errors.New("Subscriber Message Channel Closed")

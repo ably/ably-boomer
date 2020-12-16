@@ -28,7 +28,7 @@ func publishOnInterval(ctx context.Context, config *config.Config, channel *ably
 	timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 	log.Info("publishing message", "size", len(data))
-	if err := publishWithRetries(channel, timePublished, data, log); err != nil {
+	if err := publishWithRetries(ctx, channel, timePublished, data, log); err != nil {
 		log.Error("error publishing message", "err", err)
 		boomer.RecordFailure("ably", "publish", 0, err.Error())
 		errorChannel <- err
@@ -48,7 +48,7 @@ func publishOnInterval(ctx context.Context, config *config.Config, channel *ably
 			timePublished := strconv.FormatInt(millisecondTimestamp(), 10)
 
 			log.Info("publishing message", "size", len(data), "millisecondTimestamp", millisecondTimestamp())
-			if err := publishWithRetries(channel, timePublished, data, log); err != nil {
+			if err := publishWithRetries(ctx, channel, timePublished, data, log); err != nil {
 				log.Error("error publishing message", "err", err)
 				boomer.RecordFailure("ably", "publish", 0, err.Error())
 				errorChannel <- err
@@ -142,15 +142,21 @@ func shardedSubscriberTask(config *config.Config, log log15.Logger) {
 			channel := client.Channels.Get(channelName)
 
 			log.Info("creating subscriber", "num", i+1, "name", channelName)
-			sub, err := channel.Subscribe()
+			msgC := make(chan *ably.Message)
+			unsub, err := channel.SubscribeAll(ctx, func(msg *ably.Message) {
+				select {
+				case msgC <- msg:
+				case <-ctx.Done():
+				}
+			})
 			if err != nil {
 				log.Error("error creating subscriber", "num", i+1, "name", channelName, "err", err)
 				boomer.RecordFailure("ably", "subscribe", 0, err.Error())
 				return
 			}
-			defer sub.Close()
+			defer unsub()
 
-			go reportSubscriptionToLocust(ctx, sub, client.Connection, errorChannel, &wg, log.New("channel", channelName))
+			go reportSubscriptionToLocust(ctx, msgC, client.Connection, errorChannel, &wg, log.New("channel", channelName))
 		}
 	}
 
