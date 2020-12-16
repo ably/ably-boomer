@@ -12,6 +12,9 @@ type Config struct {
 	MessageDataLength int
 	Publisher         bool
 	NumChannels       int
+	LocustHost        string
+	LocustPort        int
+	Locust090         bool
 }
 
 func Default() *Config {
@@ -25,6 +28,9 @@ func Default() *Config {
 		MessageDataLength: 2000,
 		Publisher:         false,
 		NumChannels:       64,
+		LocustHost:        "localhost",
+		LocustPort:        5557,
+		Locust090:         false,
 	}
 }
 
@@ -92,6 +98,30 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Publisher,
 			EnvVars:     []string{"ABLY_PUBLISHER"},
 			Usage:       "If true, the worker will publish messages to the channels. If false, the worker will subscribe to the channels.",
+		},
+		&cli.StringFlag{
+			Name:        "locust-host",
+			Aliases:     []string{"master-host"},
+			Value:       c.LocustHost,
+			Destination: &c.LocustHost,
+			EnvVars:     []string{"LOCUST_HOST"},
+			Usage:       "Locust host",
+		},
+		&cli.IntFlag{
+			Name:        "locust-port",
+			Aliases:     []string{"master-port"},
+			Value:       c.LocustPort,
+			Destination: &c.LocustPort,
+			EnvVars:     []string{"LOCUST_PORT"},
+			Usage:       "Locust port",
+		},
+		&cli.BoolFlag{
+			Name:        "locust-0.9.0",
+			Aliases:     []string{"master-version-0.9.0"},
+			Value:       c.Locust090,
+			Destination: &c.Locust090,
+			EnvVars:     []string{"LOCUST_0_9_0"},
+			Usage:       "Enable Locust 0.9.0 support",
 		},
 	}
 }

@@ -4,6 +4,8 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/ably-forks/boomer v0.0.0-20200717132144-47e73943070d h1:QY6ZWqnlr3G0SKeG8y2Ul5WAzRSCQMT4M8RFjLlJj0k=
 github.com/ably-forks/boomer v0.0.0-20200717132144-47e73943070d/go.mod h1:POyhXMPpQaokNoe7GHQOmMhOHKWnY4B3FLePMSxsQEQ=
+github.com/ably-forks/boomer v0.0.0-20201201220851-3da99c8deebb h1:dBDBnv6cMt8jxhIu0IO4cdJ46Im2BkTPE311tl9wuZU=
+github.com/ably-forks/boomer v0.0.0-20201201220851-3da99c8deebb/go.mod h1:POyhXMPpQaokNoe7GHQOmMhOHKWnY4B3FLePMSxsQEQ=
 github.com/ably/ably-go v1.1.6-0.20200905151113-60928e378b37 h1:ULW1VSE/OFgNXqtih+m9tv/pXLc27Uw0M7LQA33+kQY=
 github.com/ably/ably-go v1.1.6-0.20200905151113-60928e378b37/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/ably/ably-go v1.1.6-0.20201023134633-d652167c4a75 h1:BG7EgRF6XVjDJ10aRinWRM3lILR8b1/Ik/v6ynRggvs=

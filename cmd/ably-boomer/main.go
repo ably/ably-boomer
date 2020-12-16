@@ -5,7 +5,6 @@ import (
 	"os"
 
 	ablyboomer "github.com/ably/ably-boomer"
-	"github.com/ably/ably-boomer/ably"
 	"github.com/ably/ably-boomer/ably/perf"
 	"github.com/ably/ably-boomer/config"
 	"github.com/inconshreveable/log15"
@@ -30,11 +29,6 @@ func main() {
 }
 
 func run(conf *config.Config, perfConf *perf.Config, log log15.Logger) error {
-	taskFn, err := ably.TaskFn(conf, log)
-	if err != nil {
-		return err
-	}
-
 	log.Info("starting perf")
 	perf := perf.New(perfConf)
 	if err := perf.Start(); err != nil {
@@ -42,5 +36,5 @@ func run(conf *config.Config, perfConf *perf.Config, log log15.Logger) error {
 	}
 	defer perf.Stop()
 
-	return ablyboomer.Run(conf.TestType, taskFn, log)
+	return ablyboomer.RunAblyTask(conf, log)
 }
