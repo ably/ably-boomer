@@ -22,12 +22,7 @@ var compositeUserMutex sync.Mutex
 
 var errorMsgTimestampRegex = regexp.MustCompile(`tamp=[0-9]+`)
 
-func compositeTask(config *config.Config, log log15.Logger) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	boomer.Events.Subscribe("boomer:stop", cancel)
-
+func compositeTask(ctx context.Context, config *config.Config, log log15.Logger) {
 	var wg sync.WaitGroup
 	errorChannel := make(chan error)
 
@@ -104,7 +99,6 @@ func compositeTask(config *config.Config, log log15.Logger) {
 	select {
 	case err := <-errorChannel:
 		log.Error("error from subscriber or publisher goroutine", "err", err)
-		cancel()
 		wg.Wait()
 		client.Close()
 		return
@@ -116,7 +110,7 @@ func compositeTask(config *config.Config, log log15.Logger) {
 	}
 }
 
-func curryCompositeTask(config *config.Config, log log15.Logger) func() {
+func CompositeTask(config *config.Config, log log15.Logger) func(context.Context) {
 	log.Info(
 		"starting composite task",
 		"env", config.Env,
@@ -125,7 +119,7 @@ func curryCompositeTask(config *config.Config, log log15.Logger) func() {
 		"publish-interval", config.PublishInterval,
 	)
 
-	return func() {
-		compositeTask(config, log)
+	return func(ctx context.Context) {
+		compositeTask(ctx, config, log)
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -36,5 +37,5 @@ func run(conf *config.Config, perfConf *perf.Config, log log15.Logger) error {
 	}
 	defer perf.Stop()
 
-	return ablyboomer.RunAblyTask(conf, log)
+	return ablyboomer.RunAblyTask(context.Background(), conf, log)
 }

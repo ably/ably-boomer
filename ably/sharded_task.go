@@ -66,14 +66,9 @@ func publishOnInterval(ctx context.Context, config *config.Config, channel *ably
 	}
 }
 
-func shardedPublisherTask(config *config.Config, log log15.Logger) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func shardedPublisherTask(ctx context.Context, config *config.Config, log log15.Logger) {
 	errorChannel := make(chan error)
 	var wg sync.WaitGroup
-
-	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	log.Info("creating realtime connection")
 	client, err := newAblyClient(config, log)
@@ -100,21 +95,16 @@ func shardedPublisherTask(config *config.Config, log log15.Logger) {
 	select {
 	case err := <-errorChannel:
 		log.Error("error from publisher goroutine", "err", err)
-		cancel()
 		client.Close()
-		shardedPublisherTask(config, log)
+		shardedPublisherTask(ctx, config, log)
 	case <-ctx.Done():
 		log.Info("sharded publisher task context done, cleaning up")
-		cancel()
 		client.Close()
 		return
 	}
 }
 
-func shardedSubscriberTask(config *config.Config, log log15.Logger) {
-	ctx, cancel := context.WithCancel(context.Background())
-	boomer.Events.Subscribe("boomer:stop", cancel)
-
+func shardedSubscriberTask(ctx context.Context, config *config.Config, log log15.Logger) {
 	errorChannel := make(chan error)
 	var wg sync.WaitGroup
 
@@ -180,7 +170,7 @@ func shardedSubscriberTask(config *config.Config, log log15.Logger) {
 	}
 }
 
-func curryShardedTask(config *config.Config, log log15.Logger) func() {
+func ShardedTask(config *config.Config, log log15.Logger) func(context.Context) {
 	if config.Publisher {
 		log.Info(
 			"starting sharded publisher task",
@@ -189,8 +179,8 @@ func curryShardedTask(config *config.Config, log log15.Logger) func() {
 			"publish-interval", config.PublishInterval,
 			"message-size", config.MessageDataLength,
 		)
-		return func() {
-			shardedPublisherTask(config, log)
+		return func(ctx context.Context) {
+			shardedPublisherTask(ctx, config, log)
 		}
 	}
 
@@ -200,7 +190,7 @@ func curryShardedTask(config *config.Config, log log15.Logger) func() {
 		"num-channels", config.NumChannels,
 		"subs-per-channel", config.NumSubscriptions,
 	)
-	return func() {
-		shardedSubscriberTask(config, log)
+	return func(ctx context.Context) {
+		shardedSubscriberTask(ctx, config, log)
 	}
 }

@@ -41,12 +41,7 @@ func randomDelay(log log15.Logger) {
 	log.Info("continuing after random delay")
 }
 
-func personalTask(config *config.Config, log log15.Logger) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	boomer.Events.Subscribe("boomer:stop", cancel)
-
+func personalTask(ctx context.Context, config *config.Config, log log15.Logger) {
 	var wg sync.WaitGroup
 	errorChannel := make(chan error)
 
@@ -100,7 +95,6 @@ func personalTask(config *config.Config, log log15.Logger) {
 		select {
 		case err := <-errorChannel:
 			log.Error("error from subscriber goroutine", "err", err)
-			cancel()
 			wg.Wait()
 			cleanup()
 			return
@@ -251,7 +245,7 @@ func createAblySubscribers(ctx context.Context, conf *config.Config, log log15.L
 	return subClients, nil
 }
 
-func curryPersonalTask(config *config.Config, log log15.Logger) func() {
+func PersonalTask(config *config.Config, log log15.Logger) func(context.Context) {
 	log.Info(
 		"starting personal task",
 		"env", config.Env,
@@ -260,7 +254,7 @@ func curryPersonalTask(config *config.Config, log log15.Logger) func() {
 		"message-size", config.MessageDataLength,
 	)
 
-	return func() {
-		personalTask(config, log)
+	return func(ctx context.Context) {
+		personalTask(ctx, config, log)
 	}
 }

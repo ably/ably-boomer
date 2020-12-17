@@ -11,7 +11,7 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-func fanOutTask(config *config.Config, log log15.Logger) {
+func fanOutTask(ctx context.Context, config *config.Config, log log15.Logger) {
 	log.Info("creating realtime connection")
 	client, err := newAblyClient(config, log)
 	if err != nil {
@@ -20,11 +20,6 @@ func fanOutTask(config *config.Config, log log15.Logger) {
 		return
 	}
 	defer client.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	boomer.Events.Subscribe("boomer:stop", cancel)
 
 	channel := client.Channels.Get(config.ChannelName)
 
@@ -52,7 +47,6 @@ func fanOutTask(config *config.Config, log log15.Logger) {
 	select {
 	case err := <-errorChannel:
 		log.Error("error from subscriber goroutine", "err", err)
-		cancel()
 		wg.Wait()
 		client.Close()
 		return
@@ -64,15 +58,15 @@ func fanOutTask(config *config.Config, log log15.Logger) {
 	}
 }
 
-func curryFanOutTask(config *config.Config, log log15.Logger) func() {
+func FanOutTask(config *config.Config, log log15.Logger) func(context.Context) {
 	log.Info(
 		"starting fanout task",
 		"env", config.Env,
 		"channel", config.ChannelName,
 	)
 
-	return func() {
-		fanOutTask(config, log)
+	return func(ctx context.Context) {
+		fanOutTask(ctx, config, log)
 	}
 }
 
