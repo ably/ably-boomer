@@ -1,0 +1,2 @@
+presence.enabled: true
+presence.channels: sharded-{{ mod .UserNumber 5 }}

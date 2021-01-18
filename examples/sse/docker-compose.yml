@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  locust:
+    image: locustio/locust:1.4.1
+    environment:
+      LOCUST_HOST: http://locust
+      LOCUST_MODE_MASTER: "true"
+    volumes:
+      - ../locustfile.py:/home/locust/locustfile.py
+    ports:
+      - 8089:8089
+
+  subscriber:
+    image: ablyrealtime/ably-boomer:latest
+    environment:
+      LOCUST_HOST: locust
+    env_file:
+      - ../../.env
+    volumes:
+      - ./sse-subscriber.yaml:/home/ablyboomer/ably-boomer.yaml
+    deploy:
+      replicas: 5
+    depends_on:
+      - locust
+
+  standalone-publisher:
+    image: ablyrealtime/ably-boomer:latest
+    environment:
+      LOCUST_HOST: locust
+    env_file:
+      - ../../.env
+    deploy:
+      replicas: 1
+    volumes:
+      - ./standalone-publisher.yaml:/home/ablyboomer/ably-boomer.yaml
+    depends_on:
+      - locust

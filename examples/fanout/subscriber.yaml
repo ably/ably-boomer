@@ -1,0 +1,2 @@
+subscriber.enabled: true
+subscriber.channels: fanout

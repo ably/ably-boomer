@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  locust:
+    image: locustio/locust:1.4.1
+    environment:
+      LOCUST_HOST: http://locust
+      LOCUST_MODE_MASTER: "true"
+    volumes:
+      - ../locustfile.py:/home/locust/locustfile.py
+    ports:
+      - 8089:8089
+
+  redis:
+    image: redis:6.0.9
+
+  ablyboomer:
+    image: ablyrealtime/ably-boomer:latest
+    environment:
+      LOCUST_HOST: locust
+      REDIS_ENABLED: "true"
+      REDIS_ADDR: redis:6379
+    env_file:
+      - ../../.env
+    volumes:
+      - ./ably-boomer.yaml:/home/ablyboomer/ably-boomer.yaml
+    deploy:
+      replicas: 5
+    depends_on:
+      - locust
+      - redis

@@ -1,0 +1,5 @@
+subscriber.enabled: true
+subscriber.channels: personal-{{ printf "%04d" .UserNumber }}
+publisher.enabled: true
+publisher.channels: personal-{{ printf "%04d" .UserNumber }}
+publisher.publish-interval: 1s
