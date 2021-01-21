@@ -1,76 +1,186 @@
-# ably-boomer
+# ablyboomer
 
-Ably load generator for Locust, based on the [boomer](https://github.com/myzhan/boomer) library.
+ablyboomer is an Ably load generator for Locust written in Go, based on the [boomer](https://github.com/myzhan/boomer) library.
 
-Ably-boomer creates Ably realtime connections and subscribes to channels, in order to generate load, and measure delivery and latency statistics, reporting back to a Locust master.
+ablyboomer defines a worker that performs the same function as a [Locust worker](https://docs.locust.io/en/stable/running-locust-distributed.html) in a distributed load test. It receives start and stop events from the Locust master, spawns the appropriate amount of users that subscribe, publish and enter Ably channels based on how ablyboomer is configured, and reports message delivery and latency statistics back to the master.
 
-## Usage
+## Quick Start
 
-Ably-boomer by default runs against Locust 1.1, but supports compatibility with Locust 0.9.0 via a command-line option.
+Follow these steps to run a simple fanout load test against the Ably service:
 
-To run the Docker container against a Locust 0.9.0 master:
+- Build the Docker image:
 
-```bash
-$ docker run -e "ABLY_ENV=<env>" \
-             -e "ABLY_API_KEY=<api key>" \
-             -e "ABLY_TEST_TYPE=<fanout | personal | sharded | composite>" \
-             --ulimit nofile=250000:250000 \
-             --rm ablyrealtime/ably-boomer \
-             --master-version-0.9.0 \
-             --master-host=<host address>
+```
+make image
 ```
 
-## Test Types
+- Copy `.env.example` to `.env` to store your private environment variables:
 
-Different test types will simulate different usage patterns.
+```
+cp .env.example .env
+```
+
+- Set `ABLY_API_KEY` in `.env` to your Ably app key
+
+- Start the docker-compose cluster in `examples/fanout`:
+
+```
+cd examples/fanout
+docker-compose up
+```
+
+- Visit http://localhost:8089 in your browser and start a load test with 50 users spawning at 5 users/sec
+
+You are now running 5 ablyboomer workers that each have 10 users subscribed to a `fanout` channel, and also
+have a single standalone worker publishing a message to the `fanout` channel every 1s, with message latency
+visible in the Locust web interface.
+
+## Building
+
+To build ablyboomer as a local binary, run:
+
+```
+make build
+```
+
+This builds a binary at `bin/ably-boomer` that you can run directly:
+
+```
+bin/ably-boomer --help
+```
+
+You can also build an ablyboomer Docker image with:
+
+```
+make image
+```
+
+Which is tagged as `ablyrealtime/ably-boomer:latest` and can be run like the binary:
+
+```
+docker run --rm ablyrealtime/ably-boomer:latest --help
+```
+
+## Config
+
+ablyboomer can be configured either using CLI flags, environment variables or a YAML config file, with
+precedence going from config file -> environment variables -> CLI flags.
+
+The path to the YAML config file defaults to `ably-boomer.yaml` in the current directory but can be set
+explicitly with the `--config` CLI flag:
+
+```
+bin/ably-boomer --config my-config.yaml
+```
+
+An example YAML config file for a fanout subscriber load test:
+
+```yaml
+locust.host: locust.example.com
+subscriber.enabled: true
+subscriber.channels: fanout
+```
+
+Or for a standalone publisher that doesn't connect to Locust but just publishes messages to the fanout channel:
+
+```yaml
+standalone.enabled: true
+standalone.users: 1
+standalone.spawn-rate: 1.0
+publisher.enabled: true
+publisher.channels: fanout
+publisher.publish-interval: 1s
+```
+
+See `bin/ably-boomer --help` for a full list of config options.
+
+### User Numbering
+
+When running more than one ablyboomer process, Redis can be used to assign a unique number to each user
+in the load test. For example, with Redis enabled, if you have 5 workers that each start 10 users, they
+will use Redis to assign numbers 1-10, 11-20, 21-30, 31-40 and 41-50.
+
+Redis can be configured with:
+
+```yaml
+redis.enable: true
+redis.addr: redis-host:6379
+redis.connect-timeout: 5s
+```
+
+### Channel Config
+
+The `subscriber.channels`, `publisher.channels` and `presence.channels` config options are a comma separated
+list of channels that a user should subscribe to, publish to or enter respectively.
+
+These config options can include a Go template to dynamically render the names of the channels, with all the
+[built-in functions](https://golang.org/pkg/text/template/#hdr-Functions) available as well as a `.UserNumber`
+variable which is the 1-indexed number of the current user and a `mod` function which performs a modulo calculation
+between two integers.
+
+For example, to generate a "personal" channel name that is unique to each user:
+
+```yaml
+subscriber.channels: personal-{{ .UserNumber }}
+```
+
+Or to do the same but with left-padded zeros:
+
+```yaml
+subscriber.channels: personal-{{ printf "%08d" .UserNumber }}
+```
+
+Or to generate a "sharded" channel name that spreads the users over a fixed set of 10 channels:
+
+```yaml
+subscriber.channels: sharded-{{ mod .UserNumber 10 }}
+```
+
+## Examples
+
+See the `examples` directory for some example load tests which can be run using docker-compose.
+
+Each example can be run by changing into the directory, running `docker-compose up` and visiting
+http://localhost:8089 in your browser:
+
+```
+cd examples/personal
+
+docker-compose up
+
+# now visit http://localhost:8089
+```
 
 ### Fanout
 
-A Fanout type test will simulate a single channel with a large number of subscribers.
+The fanout example simulates a single channel with a large number of subscribers.
 
-Each Locust user will create a single subscription.
+Each user creates a single subscription.
 
-No messages will be published to the channel - this will need to be performed separately.
+A standalone publisher publishes 1 message per second.
 
 ### Personal
 
-A Personal type test will simulate a large number of channels, each with a small number of subscribers.
+The personal example simulates a large number of channels, each with one subscriber.
 
-Each Locust user will create a new channel with a randomly-generated name with a configurable number of subscriber connections for that channel.
-
-The Ably-boomer user publishes messages to the channel periodically with a configurable interval.
+Each user subscribes to a channel based on their assigned number (e.g. `personal-0042`), and publishes a message to it every second.
 
 ### Sharded
 
-A Sharded type test will simulate a large number of subscribers, sharded over a number of channels.
+The sharded example simulates a large number of subscribers, sharded over a number of channels.
 
-Each Locust user will create a number of subscribers, distributed evenly over the configured number of channels.
+Each user subscribes to a channel using their assigned number modulo 5 (i.e. one of `sharded-0`, `sharded-1`, `sharded-2`, `sharded-3` or `sharded-5`).
 
-You can publish messages to these channels by running a task with the `ABLY_PUBLISHER` environment variable set to `true`.
+A standalone publisher publishes 1 message per second to each of the 5 sharded channels.
 
 ### Composite
 
-A Composite type test will simulate both a Personal scenario and a Sharded scenario.
+The composite example simulates both a personal scenario and a sharded scenario.
 
-Each Locust user will create a single connection with a single subcription to a Sharded Fanout channel, as well as a number of subscriptions to a Personal channel.
+Each user subscribes to a personal channel (e.g. `personal-0042`), publishes a message to it every second,
+and also subscribes to a sharded channel (i.e. one of `sharded-0`, `sharded-1`, `sharded-2`, `sharded-3` or `sharded-5`).
 
-You can publish messages to the Sharded Fanout channels by running a Sharded Fanout task with the `ABLY_PUBLISHER` environment variable set to `true`.
-
-## Test Configuration
-
-The test is configured through environment variables.
-
-Variable | Description | Default | Required
---- | --- | --- | ---
-`ABLY_TEST_TYPE` | The type of load test to run. Can be either `fanout`, `personal`, `sharded` or `composite`. | n/a | yes
-`ABLY_ENV` | The name of the Ably environment to run the load test against. | n/a | yes
-`ABLY_API_KEY` | The API key to use. | n/a | yes
-`ABLY_CHANNEL_NAME` | The name of the channel to use. Only used for `fanout` type tests. | `test_channel` | no
-`ABLY_PUBLISH_INTERVAL` | The number of seconds to wait between publishing messages. Only used for `personal`, `sharded` and `composite` type tests. | `10` | no
-`ABLY_NUM_SUBSCRIPTIONS` | The number of subscriptions to create per channel. Only used for `personal`, `sharded` and `composite` type tests. | `2` | no
-`ABLY_MSG_DATA_LENGTH` | The number of characters to publish as message data. Only used for `personal`, `sharded` and `composite` type tests. | `2000` | no
-`ABLY_PUBLISHER` | If `true`, the worker will publish messages to the channels. If `false`, the worker will subscribe to the channels. Only used for `sharded` type tests. | `false` | no
-`ABLY_NUM_CHANNELS` | The number of channels a worker could subscribe to. A channel will be chosen at random. Only used for `sharded` and `composite` type tests. | `64` | no
+A standalone publisher publishes 1 message per second to each of the 5 sharded channels.
 
 ## Performance Options
 
@@ -99,22 +209,3 @@ Variable | Description | Default | Required
 `AWS_ACCESS_KEY_ID` | The AWS access key id credential to use | n/a | no
 `AWS_SECRET_ACCESS_KEY`| The AWS secret access key to use | n/a | no
 `AWS_SESSION_TOKEN` | The AWS session token to use | n/a | no
-
-
-
-
-## Build
-
-Ably-boomer is a go executable which may be packaged as a Docker container.
-
-To build the Docker container:
-
-```bash
-$ make image
-```
-
-To compile the Go executable:
-
-```bash
-$ make build
-```
