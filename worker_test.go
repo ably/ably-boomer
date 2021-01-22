@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/config"
 	"github.com/inconshreveable/log15"
+	"github.com/myzhan/boomer"
 )
 
 // TestWorkerStandalone tests running a standalone Worker with subscriber,

@@ -7,10 +7,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/config"
 	"github.com/go-redis/redis/v8"
 	"github.com/inconshreveable/log15"
+	"github.com/myzhan/boomer"
 	"go.uber.org/atomic"
 )
 

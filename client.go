@@ -8,10 +8,10 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/ably-forks/boomer"
 	"github.com/ably/ably-boomer/config"
 	"github.com/ably/ably-go/ably"
 	"github.com/inconshreveable/log15"
+	"github.com/myzhan/boomer"
 	"github.com/r3labs/sse"
 )
 

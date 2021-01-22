@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/ably-forks/boomer v0.0.0-20210109192149-bcdec6481b67
 	github.com/ably/ably-go v1.2.0-apipreview.3
 	github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 // indirect
 	github.com/aws/aws-sdk-go v1.33.17
@@ -17,6 +16,7 @@ require (
 	github.com/inconshreveable/log15 v0.0.0-20200109203555-b30bc20e4fd1
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/myzhan/boomer v0.0.0-20210122030331-a9eddc3e0219
 	github.com/olekukonko/tablewriter v0.0.4 // indirect
 	github.com/r3labs/sse v0.0.0-20200828202401-10175c338a0a
 	github.com/shirou/gopsutil v2.20.5+incompatible // indirect

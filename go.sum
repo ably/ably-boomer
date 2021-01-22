@@ -2,8 +2,6 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUWq3EgK3CesDbo8upS2Vm9/P3FtgI+Jk=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/ably-forks/boomer v0.0.0-20210109192149-bcdec6481b67 h1:jbOiaDSonVaB6FdU/Mue2JmZCrAk88cnRig9mjB6/Ho=
-github.com/ably-forks/boomer v0.0.0-20210109192149-bcdec6481b67/go.mod h1:rIv4l5cmx6Zu4Ht2cfBvjR42+BieSv/DxOC26whTHXY=
 github.com/ably/ably-go v1.2.0-apipreview.3 h1:DPBywW7n30lD0/Od01/J7MneztcdXTdLedOnhyZwVy4=
 github.com/ably/ably-go v1.2.0-apipreview.3/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 h1:LHEOGCi+2CooiWkQB2BlzdMVh6rdRDyt5Wflv4yzvXY=
@@ -64,6 +62,8 @@ github.com/mattn/go-isatty v0.0.12 h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHX
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-runewidth v0.0.7 h1:Ei8KR0497xHyKJPAv59M1dkC+rOZCMBJ+t3fZ+twI54=
 github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
+github.com/myzhan/boomer v0.0.0-20210122030331-a9eddc3e0219 h1:JRhXkB6ZKcexfxmKunvwj0T5r7AOGqrYpHrLNLJbER0=
+github.com/myzhan/boomer v0.0.0-20210122030331-a9eddc3e0219/go.mod h1:Ma68Td5C5EAc1M9XA7yjC/tXg9u5qviNujytnX099ZQ=
 github.com/nxadm/tail v1.4.4 h1:DQuhQpB1tVlglWS2hLQ5OV6B5r8aGxSrPc5Qo6uTN78=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/olekukonko/tablewriter v0.0.4 h1:vHD/YYe1Wolo78koG299f7V/VAS08c6IpCLn+Ejf/w8=
