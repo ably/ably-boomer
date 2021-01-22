@@ -1,53 +1,50 @@
 package main
 
 import (
-	"math/rand"
+	"context"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
+	ablyboomer "github.com/ably/ably-boomer"
 	"github.com/ably/ably-boomer/config"
-	"github.com/ably/ably-boomer/tasks"
-	"github.com/ably/ably-boomer/tasks/ably"
 	"github.com/inconshreveable/log15"
 	"github.com/urfave/cli/v2"
 )
 
-var log = log15.New()
-
-func ablyAction(c *cli.Context) error {
-	taskFn, err := ably.TaskFn(log, config.ParseConf(c))
-	if err != nil {
-		return err
-	}
-	return tasks.RunWithBoomer(log, taskFn, c)
-}
-
 func main() {
-	log.Info("initialising ably-boomer")
-
-	rand.Seed(time.Now().UnixNano())
-
+	conf := config.Default()
+	flags := conf.Flags()
+	log := log15.New()
 	app := &cli.App{
-		Commands: []*cli.Command{
-			{
-				Name:    "ably",
-				Aliases: []string{"a"},
-				Usage:   "run an Ably Runtime task",
-				Action:  ablyAction,
-				Flags:   config.TaskFlags,
-			},
-		},
-		Name:  "ably-boomer",
-		Usage: "Ably load generator for Locust, based on the boomer library",
-		CommandNotFound: func(c *cli.Context, comm string) {
-			log.Crit("command not found", "command", comm)
-		},
-		Flags: config.CommonFlags,
-	}
+		Name:   "ably-boomer",
+		Usage:  "Ably load generator for Locust, based on the boomer library",
+		Flags:  flags,
+		Before: config.InitFileSourceFunc(flags, log),
+		Action: func(c *cli.Context) error {
+			// initialise an ablyboomer worker
+			worker, err := ablyboomer.NewWorker(conf, ablyboomer.WithLog(log))
+			if err != nil {
+				return err
+			}
 
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Crit("fatal error", "err", err)
+			// shutdown gracefully on SIGINT or SIGTERM
+			ctx, cancel := context.WithCancel(c.Context)
+			go func() {
+				defer cancel()
+				ch := make(chan os.Signal, 1)
+				signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+				sig := <-ch
+				log.Info("received signal, exiting...", "signal", sig)
+			}()
+
+			// run the worker until it exits
+			worker.Run(ctx)
+			return nil
+		},
+	}
+	if err := app.Run(os.Args); err != nil {
+		log.Crit("error running ably-boomer", "err", err)
 		os.Exit(1)
 	}
 }

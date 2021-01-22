@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:experimental
 FROM golang:1.14.4-alpine3.12 AS builder
 
-WORKDIR /opt/ably
+WORKDIR /home/ablyboomer
 
 RUN apk add --no-cache --upgrade make gcc libc-dev
 
@@ -14,12 +14,10 @@ RUN \
 
 FROM alpine:3.12
 
-RUN addgroup -S ably && adduser -S ably -G ably
+RUN adduser -S ablyboomer
+USER ablyboomer
+WORKDIR /home/ablyboomer
 
-WORKDIR /opt/ably
+COPY --from=builder /home/ablyboomer/bin/ably-boomer /bin/ably-boomer
 
-USER ably
-
-COPY --from=builder /opt/ably/bin/ably-boomer /opt/ably/ably-boomer
-
-ENTRYPOINT ["./ably-boomer"]
+ENTRYPOINT ["/bin/ably-boomer"]

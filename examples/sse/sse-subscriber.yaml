@@ -1,0 +1,3 @@
+client: ably-sse
+subscriber.enabled: true
+subscriber.channels: fanout

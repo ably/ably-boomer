@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  publisher:
+    image: ablyrealtime/ably-boomer:latest
+    environment:
+      LOCUST_HOST: locust
+    env_file:
+      - ../../.env
+    deploy:
+      replicas: 1
+    volumes:
+      - ./publisher.yaml:/home/ablyboomer/ably-boomer.yaml

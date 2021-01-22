@@ -1,0 +1,6 @@
+standalone.enabled: true
+standalone.users: 1
+standalone.spawn-rate: 1.0
+publisher.enabled: true
+publisher.channels: fanout
+publisher.publish-interval: 1s
