@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ably/ably-boomer/config"
+	"github.com/ably/ably-go/ably"
 	"github.com/inconshreveable/log15"
 	"github.com/myzhan/boomer"
 )
@@ -100,7 +101,7 @@ func (t *testClient) Subscribe(ctx context.Context, channel string, handler func
 	return ctx.Err()
 }
 
-func (t *testClient) Publish(ctx context.Context, channel string, msg []byte) error {
+func (t *testClient) Publish(ctx context.Context, channel string, messages []*ably.Message) error {
 	select {
 	case t.events <- testEventPublish:
 		return nil

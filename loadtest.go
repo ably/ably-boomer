@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/ably/ably-boomer/config"
+	"github.com/ably/ably-go/ably"
 	"github.com/inconshreveable/log15"
 	"go.uber.org/atomic"
 	"golang.org/x/sync/errgroup"
@@ -89,12 +91,105 @@ func (l *loadTest) runUser() {
 	l.log.Debug("user stopped")
 }
 
+func registerPushDevice(config config.SubscriberPushDeviceConfig, channel string, rest *ably.REST, log log15.Logger) error {
+	type recipient struct {
+		TransportType string `json:"transportType"`
+		Channel       string `json:"channel"`
+		AblyKey       string `json:"ablyKey"`
+		AblyUrl       string `json:"ablyUrl"`
+	}
+	type push struct {
+		Recipient recipient `json:"recipient"`
+	}
+	type input struct {
+		Id         string `json:"id"`
+		Platform   string `json:"platform"`
+		FormFactor string `json:"formFactor"`
+		Push       push   `json:"push"`
+	}
+	regInput := &input{
+		Id:         config.ID,
+		Platform:   "browser",
+		FormFactor: "other",
+		Push: push{
+			Recipient: recipient{
+				TransportType: "ablyChannel",
+				Channel:       channel,
+				AblyKey:       config.APIKey,
+				AblyUrl:       config.URL,
+			},
+		},
+	}
+	resp, err := rest.Request(
+		"POST",
+		"/push/deviceRegistrations",
+		nil,
+		regInput,
+		nil)
+	if err != nil {
+		log.Debug("error registering a push device", "err", err)
+		return err
+	}
+	if !resp.Success {
+		log.Debug("error registering a push device", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
+		return errors.New(resp.ErrorMessage)
+	}
+	return nil
+}
+
+func subscribePushDevice(config config.SubscriberPushDeviceConfig, channel string, rest *ably.REST, log log15.Logger) error {
+	type input struct {
+		Channel  string `json:"channel"`
+		DeviceId string `json:"deviceId"`
+	}
+	subInput := &input{
+		Channel:  config.Namespace + ":" + channel,
+		DeviceId: config.ID,
+	}
+	resp, err := rest.Request(
+		"POST",
+		"/push/channelSubscriptions",
+		nil,
+		subInput,
+		nil)
+	if err != nil {
+		log.Debug("error subscribing to a channel", "err", err)
+		return err
+	}
+	if !resp.Success {
+		log.Debug("error subscribing to a channel", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
+		return errors.New(resp.ErrorMessage)
+	}
+	return nil
+}
+
 // runSubscriber runs a subscriber task which renders the channel names using
 // the given user number and subscribes to each of them.
 func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int64) error {
 	channels := renderChannels(l.subscriberChannels, userNum)
 
 	l.log.Debug("starting subscriber", "channels", channels)
+
+	pushDeviceConfig := l.w.Conf().Subscriber.PushDevice
+	if pushDeviceConfig.Enabled {
+		rest, err := ably.NewREST(l.w.conf.Ably.ClientOptions()...)
+		if err != nil {
+			l.log.Debug("error creating a REST client", "err", err)
+			l.w.boomer.RecordFailure("ablyboomer", "createREST", 0, err.Error())
+			return err
+		}
+
+		for _, channel := range channels {
+			err = registerPushDevice(pushDeviceConfig, channel, rest, l.log)
+			if err != nil {
+				l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
+			}
+			err = subscribePushDevice(pushDeviceConfig, channel, rest, l.log)
+			if err != nil {
+				l.w.boomer.RecordFailure("ablyboomer", "subscribePushChannel", 0, err.Error())
+			}
+		}
+	}
 
 	errG, ctx := errgroup.WithContext(ctx)
 	for i := range channels {
@@ -103,13 +198,14 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 			for {
 				l.log.Debug("subscribing", "channel", channel)
 				err := client.Subscribe(ctx, channel, func(data []byte) {
+					var latency int64
 					var msg Message
 					if err := json.Unmarshal(data, &msg); err != nil {
 						l.log.Debug("error parsing message", "err", err)
 						l.w.boomer.RecordFailure("ablyboomer", "subscribe", 0, err.Error())
 						return
 					}
-					latency := timeNow() - msg.Time
+					latency = timeNow() - msg.Data.Time
 					size := int64(len(data))
 					l.log.Debug("subscriber received message", "channel", channel, "latency", latency, "size", size)
 					l.w.boomer.RecordSuccess("ablyboomer", "subscribe", latency, size)
@@ -141,6 +237,7 @@ func (l *loadTest) runPublisher(ctx context.Context, client Client, userNum int6
 
 	l.log.Debug("starting publisher", "channels", channels, "interval", l.w.Conf().Publisher.PublishInterval)
 
+	pushDeviceConfig := l.w.Conf().Publisher.PushDevice
 	errG, ctx := errgroup.WithContext(ctx)
 	for i := range channels {
 		channel := channels[i]
@@ -150,12 +247,27 @@ func (l *loadTest) runPublisher(ctx context.Context, client Client, userNum int6
 			for {
 				select {
 				case <-ticker.C:
+					var extras map[string]interface{}
+					if pushDeviceConfig.Enabled {
+						extras = map[string]interface{}{
+							"push": map[string]interface{}{
+								"data": Data{
+									Time: timeNow(),
+								},
+							},
+						}
+					}
 					data, _ := json.Marshal(&Message{
-						Data: randomString(l.w.Conf().Publisher.MessageSize),
-						Time: timeNow(),
+						Data: Data{
+							Content: randomString(l.w.Conf().Publisher.MessageSize),
+							Time:    timeNow(),
+						},
 					})
 					l.log.Debug("publishing message", "channel", channel, "size", len(data))
-					err := client.Publish(ctx, channel, data)
+					err := client.Publish(ctx, channel, []*ably.Message{{
+						Data:   data,
+						Extras: extras,
+					}})
 					if errors.Is(err, context.Canceled) {
 						l.log.Debug("publisher stopped", "channel", channel)
 						return nil
@@ -222,11 +334,16 @@ func (l *loadTest) stop() {
 	l.users.Wait()
 }
 
+// Data includes content as a string as well as a timestamp.
+type Data struct {
+	Content string `json:"content"`
+	Time    int64  `json:"time"`
+}
+
 // Message is the data that is published by publisher tasks and used by
 // subscriber tasks to generate latency and message size stats.
 type Message struct {
-	Time int64  `json:"time"`
-	Data string `json:"data"`
+	Data Data `json:"data"`
 }
 
 // timeNow returns the current UTC time as milliseconds since the epoch.
