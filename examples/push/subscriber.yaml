@@ -1,0 +1,3 @@
+subscriber.enabled: true
+subscriber.channels: fanout
+subscriber.push-device: true

@@ -23,7 +23,7 @@ type Client interface {
 	Subscribe(ctx context.Context, channel string, handler func(msg []byte)) error
 
 	// Publish publishes the given message on the given channel.
-	Publish(ctx context.Context, channel string, msg []byte) error
+	Publish(ctx context.Context, channel string, messages []*ably.Message) error
 
 	// Enter enters the given channel using the given clientID.
 	Enter(ctx context.Context, channel, clientID string) error
@@ -130,8 +130,8 @@ func (a *ablyClient) Subscribe(ctx context.Context, channelName string, handler 
 }
 
 // Publish publishes the given message to the given Ably channel.
-func (a *ablyClient) Publish(ctx context.Context, channelName string, msg []byte) error {
-	return a.Realtime.Channels.Get(channelName).Publish(ctx, "", msg)
+func (a *ablyClient) Publish(ctx context.Context, channelName string, messages []*ably.Message) error {
+	return a.Realtime.Channels.Get(channelName).PublishBatch(ctx, messages)
 }
 
 // Enter enters the given Ably channel using the given clientID.
@@ -190,7 +190,7 @@ func (a *ablySSEClient) Subscribe(ctx context.Context, channelName string, handl
 }
 
 // Publish is not compatible with SSE.
-func (a *ablySSEClient) Publish(ctx context.Context, channelName string, msg []byte) error {
+func (a *ablySSEClient) Publish(ctx context.Context, channelName string, messages []*ably.Message) error {
 	return errors.New("Publish not implemented for SSE client")
 }
 
