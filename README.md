@@ -180,7 +180,25 @@ The composite example simulates both a personal scenario and a sharded scenario.
 Each user subscribes to a personal channel (e.g. `personal-0042`), publishes a message to it every second,
 and also subscribes to a sharded channel (i.e. one of `sharded-0`, `sharded-1`, `sharded-2`, `sharded-3` or `sharded-5`).
 
-A standalone publisher publishes 1 message per second to each of the 5 sharded channels.
+A standalone publisher publishes 1 message per second to each of the 5 sharded
+channels.
+
+### Push Fanout
+
+The push fanout example creates many push devices that subscribe on a
+push-enabled channel. These devices use `ablyChannel` as their `transportType`,
+allowing them to publish to a channel on receiving a notification. The
+push-enabled channel sends one notification per device devices on receiving a message.
+
+A standalone publisher publishes 1 message per second.
+
+Note that running this test requires you to manually create a push-enabled namespace
+on your dashboard, choosing a name and setting it to `SUBSCRIBER_PUSH_DEVICE_NAMESPACE` and
+adding it as a prefix to `PUBLISHER_CHANNELS`.
+
+If you are a Ably enterprise customer and have access to the `/apps` app
+creation endpoint in the REST API on non-production clusters you can use it to
+create transient applications for testing.
 
 ## Performance Options
 
