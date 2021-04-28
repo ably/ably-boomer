@@ -2,6 +2,6 @@ standalone.enabled: true
 standalone.users: 1
 standalone.spawn-rate: 1.0
 publisher.enabled: true
-publisher.channels: pushenabled:fanout
+publisher.channels: push:fanout
 publisher.publish-interval: 1s
-publisher.push-device: true
+publisher.push-enabled: true

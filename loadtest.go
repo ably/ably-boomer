@@ -91,7 +91,7 @@ func (l *loadTest) runUser() {
 	l.log.Debug("user stopped")
 }
 
-func registerPushDevice(config config.SubscriberPushDeviceConfig, channel string, rest *ably.REST, log log15.Logger) error {
+func registerPushDevice(config *config.Config, deviceID, outputChannel string, rest *ably.REST, log log15.Logger) error {
 	type recipient struct {
 		TransportType string `json:"transportType"`
 		Channel       string `json:"channel"`
@@ -108,15 +108,15 @@ func registerPushDevice(config config.SubscriberPushDeviceConfig, channel string
 		Push       push   `json:"push"`
 	}
 	regInput := &input{
-		Id:         config.ID,
+		Id:         deviceID,
 		Platform:   "browser",
 		FormFactor: "other",
 		Push: push{
 			Recipient: recipient{
 				TransportType: "ablyChannel",
-				Channel:       channel,
-				AblyKey:       config.APIKey,
-				AblyUrl:       config.URL,
+				Channel:       outputChannel,
+				AblyKey:       config.Ably.APIKey,
+				AblyUrl:       config.Subscriber.PushDevice.URL,
 			},
 		},
 	}
@@ -137,14 +137,14 @@ func registerPushDevice(config config.SubscriberPushDeviceConfig, channel string
 	return nil
 }
 
-func subscribePushDevice(config config.SubscriberPushDeviceConfig, channel string, rest *ably.REST, log log15.Logger) error {
+func subscribePushDevice(config *config.Config, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
 	type input struct {
 		Channel  string `json:"channel"`
 		DeviceId string `json:"deviceId"`
 	}
 	subInput := &input{
-		Channel:  config.Namespace + ":" + channel,
-		DeviceId: config.ID,
+		Channel:  channel,
+		DeviceId: deviceID,
 	}
 	resp, err := rest.Request(
 		"POST",
@@ -170,8 +170,7 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 
 	l.log.Debug("starting subscriber", "channels", channels)
 
-	pushDeviceConfig := l.w.Conf().Subscriber.PushDevice
-	if pushDeviceConfig.Enabled {
+	if l.w.Conf().Subscriber.PushDevice.Enabled {
 		rest, err := ably.NewREST(l.w.conf.Ably.ClientOptions()...)
 		if err != nil {
 			l.log.Debug("error creating a REST client", "err", err)
@@ -179,16 +178,24 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 			return err
 		}
 
+		deviceID := fmt.Sprintf("device-%04d", userNum)
+		outputChannel := fmt.Sprintf("push-%04d", userNum)
+
+		err = registerPushDevice(l.w.Conf(), outputChannel, deviceID, rest, l.log)
+		if err != nil {
+			l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
+		}
+
 		for _, channel := range channels {
-			err = registerPushDevice(pushDeviceConfig, channel, rest, l.log)
-			if err != nil {
-				l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
-			}
-			err = subscribePushDevice(pushDeviceConfig, channel, rest, l.log)
+			err = subscribePushDevice(l.w.Conf(), deviceID, channel, rest, l.log)
 			if err != nil {
 				l.w.boomer.RecordFailure("ablyboomer", "subscribePushChannel", 0, err.Error())
 			}
 		}
+
+		// If we enable the push device we want the subscriber to subscribe to
+		// the channel the device will push to when receiving a notification.
+		channels = []string{outputChannel}
 	}
 
 	errG, ctx := errgroup.WithContext(ctx)
@@ -198,14 +205,13 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 			for {
 				l.log.Debug("subscribing", "channel", channel)
 				err := client.Subscribe(ctx, channel, func(data []byte) {
-					var latency int64
 					var msg Message
 					if err := json.Unmarshal(data, &msg); err != nil {
 						l.log.Debug("error parsing message", "err", err)
 						l.w.boomer.RecordFailure("ablyboomer", "subscribe", 0, err.Error())
 						return
 					}
-					latency = timeNow() - msg.Data.Time
+					latency := timeNow() - msg.Data.Time
 					size := int64(len(data))
 					l.log.Debug("subscriber received message", "channel", channel, "latency", latency, "size", size)
 					l.w.boomer.RecordSuccess("ablyboomer", "subscribe", latency, size)
@@ -237,7 +243,6 @@ func (l *loadTest) runPublisher(ctx context.Context, client Client, userNum int6
 
 	l.log.Debug("starting publisher", "channels", channels, "interval", l.w.Conf().Publisher.PublishInterval)
 
-	pushDeviceConfig := l.w.Conf().Publisher.PushDevice
 	errG, ctx := errgroup.WithContext(ctx)
 	for i := range channels {
 		channel := channels[i]
@@ -248,11 +253,11 @@ func (l *loadTest) runPublisher(ctx context.Context, client Client, userNum int6
 				select {
 				case <-ticker.C:
 					var extras map[string]interface{}
-					if pushDeviceConfig.Enabled {
+					if l.w.Conf().Publisher.PushEnabled {
 						extras = map[string]interface{}{
 							"push": map[string]interface{}{
-								"data": Data{
-									Time: timeNow(),
+								"data": map[string]interface{}{
+									"time": timeNow(),
 								},
 							},
 						}
