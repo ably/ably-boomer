@@ -18,7 +18,7 @@ func Default() *Config {
 
 	conf.Client = ClientAbly
 
-	conf.Subscriber.Enabled = true
+	conf.Subscriber.Enabled = false
 	conf.Subscriber.Channels = "ably-boomer-test"
 	conf.Subscriber.PushDevice = SubscriberPushDeviceConfig{
 		Enabled: false,
