@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	ablyboomer "github.com/ably/ably-boomer"
 	"github.com/ably/ably-boomer/config"
@@ -22,6 +24,8 @@ func main() {
 		Flags:  flags,
 		Before: config.InitFileSourceFunc(flags, log),
 		Action: func(c *cli.Context) error {
+			rand.Seed(time.Now().UnixNano())
+
 			// initialise an ablyboomer worker
 			worker, err := ablyboomer.NewWorker(conf, ablyboomer.WithLog(log))
 			if err != nil {
