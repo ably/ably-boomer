@@ -187,7 +187,7 @@ channels.
 
 The push fanout example simulates a single channel with a large number of push device subscribers.
 
-Each user registers a push device  (e.g. `device-0042`) with the ablyChannel transport which publishes messages back to a channel (e.g. `push-0042`), and subscribes to that channel to measure latency of messages pushed to it. Each user then subscribes that push device to a single fanout channel.
+Each user registers a push device with the ablyChannel transport which publishes messages back to a channel, and subscribes to that channel to measure latency of messages pushed to it. Each user then subscribes that push device to a single fanout channel.
 
 A standalone publisher publishes 1 message per second to the fanout channel.
 
