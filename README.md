@@ -187,18 +187,18 @@ channels.
 
 The push fanout example simulates a single channel with a large number of push device subscribers.
 
-Each user registers a push device with the ablyChannel transport which publishes messages back to a personal channel (e.g. `personal-0042`), and subscribes to that personal channel to measure latency of messages pushed to it. Each user then subscribes that push device to a single fanout channel.
+Each user registers a push device  (e.g. `device-0042`) with the ablyChannel transport which publishes messages back to a channel (e.g. `push-0042`), and subscribes to that channel to measure latency of messages pushed to it. Each user then subscribes that push device to a single fanout channel.
 
 A standalone publisher publishes 1 message per second to the fanout channel.
 
 Note that running this test requires you to [enable push
 notifications](https://knowledge.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app)
-on a namespace (or to enable it in the default channel rule), and set its name
-to the subscriber and publisher config options. For example, with a namespace
+on a namespace (or to enable it in the default channel rule), and add it
+to the subscriber and publisher channels config options. For example, with a namespace
 called `push`:
 
 ```yaml
-subscriber.push-device.namespace: push
+subscriber.channels: push:fanout
 
 publisher.channels: push:fanout
 ```

@@ -21,17 +21,15 @@ func Default() *Config {
 	conf.Subscriber.Enabled = true
 	conf.Subscriber.Channels = "ably-boomer-test"
 	conf.Subscriber.PushDevice = SubscriberPushDeviceConfig{
-		Enabled:   false,
-		ID:        "some-device",
-		URL:       "https://rest.ably.io",
-		Namespace: "pushenabled",
+		Enabled: false,
+		URL:     "https://rest.ably.io",
 	}
 
 	conf.Publisher.Enabled = false
 	conf.Publisher.Channels = "ably-boomer-test"
 	conf.Publisher.PublishInterval = time.Second
 	conf.Publisher.MessageSize = 2 * units.KiB
-	conf.Publisher.PushDevice.Enabled = false
+	conf.Publisher.PushEnabled = false
 
 	conf.Standalone.Enabled = false
 	conf.Standalone.Users = 1
@@ -77,11 +75,8 @@ type SubscriberConfig struct {
 }
 
 type SubscriberPushDeviceConfig struct {
-	Enabled   bool
-	ID        string
-	APIKey    string
-	URL       string
-	Namespace string
+	Enabled bool
+	URL     string
 }
 
 type PublisherConfig struct {
@@ -89,11 +84,7 @@ type PublisherConfig struct {
 	Channels        string
 	PublishInterval time.Duration
 	MessageSize     int64
-	PushDevice      PublisherPushDeviceConfig
-}
-
-type PublisherPushDeviceConfig struct {
-	Enabled bool
+	PushEnabled     bool
 }
 
 type PresenceConfig struct {
