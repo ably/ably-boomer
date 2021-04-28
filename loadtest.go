@@ -168,9 +168,9 @@ func subscribePushDevice(config *config.Config, deviceID, channel string, rest *
 func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int64) error {
 	channels := renderChannels(l.subscriberChannels, userNum)
 
-	l.log.Debug("starting subscriber", "channels", channels)
-
 	if l.w.Conf().Subscriber.PushDevice.Enabled {
+		l.log.Debug("creating push device")
+
 		rest, err := ably.NewREST(l.w.conf.Ably.ClientOptions()...)
 		if err != nil {
 			l.log.Debug("error creating a REST client", "err", err)
@@ -178,10 +178,11 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 			return err
 		}
 
-		deviceID := fmt.Sprintf("device-%04d", userNum)
-		outputChannel := fmt.Sprintf("push-%04d", userNum)
+		name := randomString(8)
+		deviceID := fmt.Sprintf("device-%v", name)
+		outputChannel := fmt.Sprintf("push-%v", name)
 
-		err = registerPushDevice(l.w.Conf(), outputChannel, deviceID, rest, l.log)
+		err = registerPushDevice(l.w.Conf(), deviceID, outputChannel, rest, l.log)
 		if err != nil {
 			l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
 		}
@@ -197,6 +198,8 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		// the channel the device will push to when receiving a notification.
 		channels = []string{outputChannel}
 	}
+
+	l.log.Debug("starting subscriber", "channels", channels)
 
 	errG, ctx := errgroup.WithContext(ctx)
 	for i := range channels {
