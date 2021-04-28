@@ -198,7 +198,7 @@ to the subscriber and publisher config options. For example, with a namespace
 called `push`:
 
 ```yaml
-subscriber.push_device.namespace: push
+subscriber.push-device.namespace: push
 
 publisher.channels: push:fanout
 ```
