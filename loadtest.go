@@ -91,7 +91,7 @@ func (l *loadTest) runUser() {
 	l.log.Debug("user stopped")
 }
 
-func registerPushDevice(config *config.Config, deviceID, outputChannel string, rest *ably.REST, log log15.Logger) error {
+func registerPushDevice(ctx context.Context, config *config.Config, deviceID, outputChannel string, rest *ably.REST, log log15.Logger) error {
 	type recipient struct {
 		TransportType string `json:"transportType"`
 		Channel       string `json:"channel"`
@@ -121,6 +121,7 @@ func registerPushDevice(config *config.Config, deviceID, outputChannel string, r
 		},
 	}
 	resp, err := rest.Request(
+		ctx,
 		"POST",
 		"/push/deviceRegistrations",
 		nil,
@@ -137,7 +138,7 @@ func registerPushDevice(config *config.Config, deviceID, outputChannel string, r
 	return nil
 }
 
-func subscribePushDevice(config *config.Config, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
+func subscribePushDevice(ctx context.Context, config *config.Config, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
 	type input struct {
 		Channel  string `json:"channel"`
 		DeviceId string `json:"deviceId"`
@@ -147,6 +148,7 @@ func subscribePushDevice(config *config.Config, deviceID, channel string, rest *
 		DeviceId: deviceID,
 	}
 	resp, err := rest.Request(
+		ctx,
 		"POST",
 		"/push/channelSubscriptions",
 		nil,
@@ -207,7 +209,7 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 
 		for {
 			l.log.Debug("registering push device", "deviceID", deviceID)
-			err := registerPushDevice(l.w.Conf(), deviceID, outputChannel, rest, l.log)
+			err := registerPushDevice(ctx, l.w.Conf(), deviceID, outputChannel, rest, l.log)
 			if err == nil {
 				break
 			} else {
@@ -225,7 +227,7 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		for _, channel := range channels {
 			for {
 				l.log.Debug("subscribing push device", "deviceID", deviceID)
-				err := subscribePushDevice(l.w.Conf(), deviceID, channel, rest, l.log)
+				err := subscribePushDevice(ctx, l.w.Conf(), deviceID, channel, rest, l.log)
 				if err == nil {
 					break
 				} else {
