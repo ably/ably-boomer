@@ -94,7 +94,7 @@ type testClient struct {
 	events chan testEvent
 }
 
-func (t *testClient) Subscribe(ctx context.Context, channel string, handler func([]byte)) error {
+func (t *testClient) Subscribe(ctx context.Context, channel string, handler func(*ably.Message)) error {
 	t.events <- testEventSubscribe
 	<-ctx.Done()
 	t.events <- testEventStop

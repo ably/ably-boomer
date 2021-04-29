@@ -20,7 +20,7 @@ import (
 type Client interface {
 	// Subscribe subscribes to the given channel and calls the given
 	// handler for each message received.
-	Subscribe(ctx context.Context, channel string, handler func(msg []byte)) error
+	Subscribe(ctx context.Context, channel string, handler func(msg *ably.Message)) error
 
 	// Publish publishes the given message on the given channel.
 	Publish(ctx context.Context, channel string, messages []*ably.Message) error
@@ -116,10 +116,10 @@ type ablyClient struct {
 
 // Subscribe subscribes to the given Ably channel and calls the given handler
 // with the data of each message received.
-func (a *ablyClient) Subscribe(ctx context.Context, channelName string, handler func([]byte)) error {
+func (a *ablyClient) Subscribe(ctx context.Context, channelName string, handler func(*ably.Message)) error {
 	channel := a.Realtime.Channels.Get(channelName)
 	unsub, err := channel.SubscribeAll(ctx, func(msg *ably.Message) {
-		handler([]byte(fmt.Sprintf("%v", msg.Data)))
+		handler(msg)
 	})
 	if err != nil {
 		return err
@@ -164,7 +164,7 @@ type ablySSEClient struct {
 
 // Subscribe subscribes to the given Ably channel using SSE and calls the given
 // handler with the data of each non-empty message received.
-func (a *ablySSEClient) Subscribe(ctx context.Context, channelName string, handler func([]byte)) error {
+func (a *ablySSEClient) Subscribe(ctx context.Context, channelName string, handler func(*ably.Message)) error {
 	u := url.URL{
 		Scheme:   "https",
 		Host:     "realtime.ably.io",
@@ -184,7 +184,7 @@ func (a *ablySSEClient) Subscribe(ctx context.Context, channelName string, handl
 		if len(event.Data) > 0 {
 			var msg ably.Message
 			json.Unmarshal(event.Data, &msg)
-			handler(msg.Data.([]byte))
+			handler(&msg)
 		}
 	})
 }

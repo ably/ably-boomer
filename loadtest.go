@@ -178,8 +178,16 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 			errG.Go(func() error {
 				for {
 					l.log.Debug("subscribing to metachannel")
-					err := client.Subscribe(ctx, "[meta]log:push", func(data []byte) {
-						l.log.Debug("push metachannel:", "message", string(data))
+					err := client.Subscribe(ctx, "[meta]log:push", func(message *ably.Message) {
+						data := message.Data.(map[string]interface{})
+						if severity, ok := data["severity"]; ok && severity == "error" {
+							if meta, ok := data["meta"].(map[string]interface{}); ok {
+								if errStr, ok := meta["error"].(string); ok {
+									l.w.boomer.RecordFailure("ablyboomer", "pushLog", 0, errStr)
+								}
+							}
+						}
+						l.log.Debug("push metachannel:", "message", data)
 					})
 					if errors.Is(err, context.Canceled) {
 						return nil
@@ -255,7 +263,8 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		errG.Go(func() error {
 			for {
 				l.log.Debug("subscribing", "channel", channel)
-				err := client.Subscribe(ctx, channel, func(data []byte) {
+				err := client.Subscribe(ctx, channel, func(message *ably.Message) {
+					data := []byte(message.Data.(string))
 					var msg Message
 					if err := json.Unmarshal(data, &msg); err != nil {
 						l.log.Debug("error parsing message", "err", err)
