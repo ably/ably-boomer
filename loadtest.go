@@ -205,15 +205,39 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		deviceID := fmt.Sprintf("device-%v", name)
 		outputChannel := fmt.Sprintf("push-%v", name)
 
-		err = registerPushDevice(l.w.Conf(), deviceID, outputChannel, rest, l.log)
-		if err != nil {
-			l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
+		for {
+			l.log.Debug("registering push device", "deviceID", deviceID)
+			err := registerPushDevice(l.w.Conf(), deviceID, outputChannel, rest, l.log)
+			if err == nil {
+				break
+			} else {
+				l.log.Debug("error registering push device", "deviceID", deviceID, "err", err)
+				l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
+				// try again in a second
+				select {
+				case <-time.After(time.Second):
+				case <-ctx.Done():
+					return nil
+				}
+			}
 		}
 
 		for _, channel := range channels {
-			err = subscribePushDevice(l.w.Conf(), deviceID, channel, rest, l.log)
-			if err != nil {
-				l.w.boomer.RecordFailure("ablyboomer", "subscribePushChannel", 0, err.Error())
+			for {
+				l.log.Debug("subscribing push device", "deviceID", deviceID)
+				err := subscribePushDevice(l.w.Conf(), deviceID, channel, rest, l.log)
+				if err == nil {
+					break
+				} else {
+					l.log.Debug("error subscribing push device", "deviceID", deviceID, "err", err)
+					l.w.boomer.RecordFailure("ablyboomer", "subscribePushDevice", 0, err.Error())
+					// try again in a second
+					select {
+					case <-time.After(time.Second):
+					case <-ctx.Done():
+						return nil
+					}
+				}
 			}
 		}
 
