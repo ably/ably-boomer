@@ -56,6 +56,13 @@ func (c *Config) Flags() []cli.Flag {
 			EnvVars:     []string{"SUBSCRIBER_PUSH_DEVICE_URL"},
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
+			Name:        "subscriber.push-device.metachannel-enabled",
+			Usage:       "Subscribe to the push metachannel to receive push delivery errors",
+			Value:       c.Subscriber.PushDevice.MetachannelEnabled,
+			Destination: &c.Subscriber.PushDevice.MetachannelEnabled,
+			EnvVars:     []string{"SUBSCRIBER_PUSH_DEVICE_METACHANNEL_ENABLED"},
+		}),
+		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        "publisher.enabled",
 			Usage:       "Run publishers",
 			Value:       c.Publisher.Enabled,

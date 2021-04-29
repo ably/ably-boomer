@@ -21,8 +21,9 @@ func Default() *Config {
 	conf.Subscriber.Enabled = false
 	conf.Subscriber.Channels = "ably-boomer-test"
 	conf.Subscriber.PushDevice = SubscriberPushDeviceConfig{
-		Enabled: false,
-		URL:     "https://rest.ably.io",
+		Enabled:            false,
+		URL:                "https://rest.ably.io",
+		MetachannelEnabled: false,
 	}
 
 	conf.Publisher.Enabled = false
@@ -75,8 +76,9 @@ type SubscriberConfig struct {
 }
 
 type SubscriberPushDeviceConfig struct {
-	Enabled bool
-	URL     string
+	Enabled            bool
+	URL                string
+	MetachannelEnabled bool
 }
 
 type PublisherConfig struct {

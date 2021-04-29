@@ -168,8 +168,31 @@ func subscribePushDevice(config *config.Config, deviceID, channel string, rest *
 func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int64) error {
 	channels := renderChannels(l.subscriberChannels, userNum)
 
+	errG, ctx := errgroup.WithContext(ctx)
 	if l.w.Conf().Subscriber.PushDevice.Enabled {
 		l.log.Debug("creating push device")
+
+		if l.w.Conf().Subscriber.PushDevice.MetachannelEnabled {
+			errG.Go(func() error {
+				for {
+					l.log.Debug("subscribing to metachannel")
+					err := client.Subscribe(ctx, "[meta]log:push", func(data []byte) {
+						l.log.Debug("push metachannel:", "message", string(data))
+					})
+					if errors.Is(err, context.Canceled) {
+						return nil
+					} else if err != nil {
+						l.log.Debug("error subscribing to push metachannel", "err", err)
+						// try again in a second
+						select {
+						case <-time.After(time.Second):
+						case <-ctx.Done():
+							return nil
+						}
+					}
+				}
+			})
+		}
 
 		rest, err := ably.NewREST(l.w.conf.Ably.ClientOptions()...)
 		if err != nil {
@@ -201,7 +224,6 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 
 	l.log.Debug("starting subscriber", "channels", channels)
 
-	errG, ctx := errgroup.WithContext(ctx)
 	for i := range channels {
 		channel := channels[i]
 		errG.Go(func() error {
