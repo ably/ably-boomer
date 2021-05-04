@@ -328,20 +328,22 @@ func (l *loadTest) runPublisher(ctx context.Context, client Client, userNum int6
 							Time:    timeNow(),
 						},
 					})
-					l.log.Debug("publishing message", "channel", channel, "size", len(data))
-					err := client.Publish(ctx, channel, []*ably.Message{{
-						Data:   data,
-						Extras: extras,
-					}})
-					if errors.Is(err, context.Canceled) {
-						l.log.Debug("publisher stopped", "channel", channel)
+					errG.Go(func() error {
+						l.log.Debug("publishing message", "channel", channel, "size", len(data))
+						err := client.Publish(ctx, channel, []*ably.Message{{
+							Data:   data,
+							Extras: extras,
+						}})
+						if errors.Is(err, context.Canceled) {
+							l.log.Debug("publication canceled", "channel", channel)
+						} else if err != nil {
+							l.log.Debug("error publishing message", "channel", channel, "err", err)
+							l.w.boomer.RecordFailure("ablyboomer", "publish", 0, err.Error())
+						} else {
+							l.w.boomer.RecordSuccess("ablyboomer", "publish", 0, int64(len(data)))
+						}
 						return nil
-					} else if err != nil {
-						l.log.Debug("error publishing message", "channel", channel, "err", err)
-						l.w.boomer.RecordFailure("ablyboomer", "publish", 0, err.Error())
-					} else {
-						l.w.boomer.RecordSuccess("ablyboomer", "publish", 0, int64(len(data)))
-					}
+					})
 				case <-ctx.Done():
 					l.log.Debug("publisher stopped", "channel", channel)
 					return nil
