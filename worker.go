@@ -289,8 +289,10 @@ func (w *Worker) onBoomerStop() {
 	w.mtx.Lock()
 	defer w.mtx.Unlock()
 	w.log.Info("stopping current load test")
-	w.current.stop()
-	w.current = nil
+	if w.current != nil {
+		w.current.stop()
+		w.current = nil
+	}
 }
 
 // onBoomerTask handles a task invocation by the boomer task runner by running
