@@ -216,13 +216,17 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		outputChannel := fmt.Sprintf("push-%v", name)
 
 		for {
+			startTime := timeNow()
 			l.log.Debug("registering push device", "deviceID", deviceID)
 			err := registerPushDevice(ctx, l.w.Conf(), deviceID, outputChannel, rest, l.log)
+			elapsedTime := timeNow() - startTime
 			if err == nil {
+				l.log.Debug("registered push device", "deviceID", deviceID, "elapsedTime", elapsedTime)
+				l.w.boomer.RecordSuccess("ablyboomer", "registerPushDevice", elapsedTime, 0)
 				break
 			} else {
-				l.log.Debug("error registering push device", "deviceID", deviceID, "err", err)
-				l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", 0, err.Error())
+				l.log.Debug("error registering push device", "deviceID", deviceID, "elapsedTime", elapsedTime, "err", err)
+				l.w.boomer.RecordFailure("ablyboomer", "registerPushDevice", elapsedTime, err.Error())
 				// try again in a second
 				select {
 				case <-time.After(time.Second):
@@ -234,13 +238,17 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 
 		for _, channel := range channels {
 			for {
+				startTime := timeNow()
 				l.log.Debug("subscribing push device", "deviceID", deviceID)
 				err := subscribePushDevice(ctx, l.w.Conf(), deviceID, channel, rest, l.log)
+				elapsedTime := timeNow() - startTime
 				if err == nil {
+					l.log.Debug("subscribed push device", "deviceID", deviceID, "elapsedTime", elapsedTime)
+					l.w.boomer.RecordSuccess("ablyboomer", "subscribePushDevice", elapsedTime, 0)
 					break
 				} else {
-					l.log.Debug("error subscribing push device", "deviceID", deviceID, "err", err)
-					l.w.boomer.RecordFailure("ablyboomer", "subscribePushDevice", 0, err.Error())
+					l.log.Debug("error subscribing push device", "deviceID", deviceID, "elapsedTime", elapsedTime, "err", err)
+					l.w.boomer.RecordFailure("ablyboomer", "subscribePushDevice", elapsedTime, err.Error())
 					// try again in a second
 					select {
 					case <-time.After(time.Second):
