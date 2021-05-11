@@ -39,6 +39,9 @@ func Default() *Config {
 	conf.Locust.Host = "127.0.0.1"
 	conf.Locust.Port = 5557
 
+	conf.Ably.ConnectionTimeout = 4 * time.Second
+	conf.Ably.RequestTimeout = 10 * time.Second
+
 	conf.Log.Level = log15.LvlInfo.String()
 
 	conf.Redis.Enabled = false
@@ -106,13 +109,21 @@ type LocustConfig struct {
 }
 
 type AblyConfig struct {
-	APIKey      string
-	Environment string
+	APIKey            string
+	Environment       string
+	ConnectionTimeout time.Duration
+	RequestTimeout    time.Duration
 }
 
 func (a *AblyConfig) ClientOptions() []ably.ClientOption {
 	opts := []ably.ClientOption{
 		ably.WithKey(a.APIKey),
+		// Set the connection and request timeouts for REST.
+		ably.WithHTTPRequestTimeout(a.RequestTimeout),
+		// Set the connection timeout for Realtime.
+		ably.WithHTTPOpenTimeout(a.ConnectionTimeout),
+		// Set the request timeout for Realtime.
+		ably.WithRealtimeRequestTimeout(a.RequestTimeout),
 	}
 	if a.Environment != "" {
 		opts = append(opts, ably.WithEnvironment(a.Environment))

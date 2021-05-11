@@ -161,6 +161,20 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Ably.Environment,
 			EnvVars:     []string{"ABLY_ENV"},
 		}),
+		altsrc.NewDurationFlag(&cli.DurationFlag{
+			Name:        "ably.connection-timeout",
+			Usage:       "The connection timeout",
+			Value:       c.Ably.ConnectionTimeout,
+			Destination: &c.Ably.ConnectionTimeout,
+			EnvVars:     []string{"ABLY_CONNECTION_TIMEOUT"},
+		}),
+		altsrc.NewDurationFlag(&cli.DurationFlag{
+			Name:        "ably.request-timeout",
+			Usage:       "The request timeout",
+			Value:       c.Ably.RequestTimeout,
+			Destination: &c.Ably.RequestTimeout,
+			EnvVars:     []string{"ABLY_REQUEST_TIMEOUT"},
+		}),
 		altsrc.NewPathFlag(&cli.PathFlag{
 			Name:        "perf.cpu-profile-dir",
 			Usage:       "The directory path to write the pprof cpu profile",
