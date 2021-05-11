@@ -175,6 +175,7 @@ func (a *ablySSEClient) Subscribe(ctx context.Context, channelName string, handl
 		u.Host = env + "-" + u.Host
 	}
 	client := sse.NewClient(u.String())
+	client.Connection.Timeout = a.conf.Ably.RequestTimeout
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		<-a.stop
