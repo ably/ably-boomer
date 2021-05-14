@@ -79,9 +79,11 @@ type SubscriberConfig struct {
 }
 
 type SubscriberPushDeviceConfig struct {
-	Enabled            bool
-	URL                string
-	MetachannelEnabled bool
+	Enabled                    bool
+	URL                        string
+	MetachannelEnabled         bool
+	RegistrationUpdateInterval time.Duration
+	SubscriptionUpdateInterval time.Duration
 }
 
 type PublisherConfig struct {

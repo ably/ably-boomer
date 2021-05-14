@@ -62,6 +62,20 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Subscriber.PushDevice.MetachannelEnabled,
 			EnvVars:     []string{"SUBSCRIBER_PUSH_DEVICE_METACHANNEL_ENABLED"},
 		}),
+		altsrc.NewDurationFlag(&cli.DurationFlag{
+			Name:        "subscriber.push-device.registration-update-interval",
+			Usage:       "The interval between two registration updates (0 to disable)",
+			Value:       c.Subscriber.PushDevice.RegistrationUpdateInterval,
+			Destination: &c.Subscriber.PushDevice.RegistrationUpdateInterval,
+			EnvVars:     []string{"SUBSCRIBER_PUSH_DEVICE_REGISTRATION_UPDATE_INTERVAL"},
+		}),
+		altsrc.NewDurationFlag(&cli.DurationFlag{
+			Name:        "subscriber.push-device.subscription-update-interval",
+			Usage:       "The interval between two subscription updates (0 to disable)",
+			Value:       c.Subscriber.PushDevice.SubscriptionUpdateInterval,
+			Destination: &c.Subscriber.PushDevice.SubscriptionUpdateInterval,
+			EnvVars:     []string{"SUBSCRIBER_PUSH_DEVICE_SUBSCRIPTION_UPDATE_INTERVAL"},
+		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        "publisher.enabled",
 			Usage:       "Run publishers",
