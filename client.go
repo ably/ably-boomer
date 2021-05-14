@@ -131,7 +131,7 @@ func (a *ablyClient) Subscribe(ctx context.Context, channelName string, handler 
 
 // Publish publishes the given message to the given Ably channel.
 func (a *ablyClient) Publish(ctx context.Context, channelName string, messages []*ably.Message) error {
-	return a.Realtime.Channels.Get(channelName).PublishBatch(ctx, messages)
+	return a.Realtime.Channels.Get(channelName).PublishMultiple(ctx, messages)
 }
 
 // Enter enters the given Ably channel using the given clientID.
