@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"sync"
 	"text/template"
 	"time"
@@ -127,20 +128,18 @@ func registerPushDevice(
 			},
 		},
 	}
-	resp, err := rest.Request(
-		ctx,
+	req := rest.Request(
 		"POST",
 		"/push/deviceRegistrations",
-		nil,
-		regInput,
-		nil)
+		ably.RequestWithBody(regInput))
+	item, err := req.Items(ctx)
 	if err != nil {
 		log.Debug("error registering a push device", "err", err)
 		return err
 	}
-	if !resp.Success {
-		log.Debug("error registering a push device", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
-		return errors.New(resp.ErrorMessage)
+	if item.Err() != nil {
+		log.Debug("error registering a push device", "err", item.Err())
+		return item.Err()
 	}
 	return nil
 }
@@ -152,20 +151,18 @@ func updatePushDevice(ctx context.Context, deviceID string, metadata map[string]
 	regInput := &input{
 		Metadata: metadata,
 	}
-	resp, err := rest.Request(
-		ctx,
+	req := rest.Request(
 		"PATCH",
 		"/push/deviceRegistrations/"+deviceID,
-		nil,
-		regInput,
-		nil)
+		ably.RequestWithBody(regInput))
+	item, err := req.Items(ctx)
 	if err != nil {
 		log.Debug("error updating a push device", "err", err)
 		return err
 	}
-	if !resp.Success {
-		log.Debug("error updating a push device", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
-		return errors.New(resp.ErrorMessage)
+	if item.Err() != nil {
+		log.Debug("error updating a push device", "err", item.Err())
+		return item.Err()
 	}
 	return nil
 }
@@ -179,41 +176,49 @@ func subscribePushDevice(ctx context.Context, deviceID, channel string, rest *ab
 		Channel:  channel,
 		DeviceId: deviceID,
 	}
-	resp, err := rest.Request(
-		ctx,
+	req := rest.Request(
 		"POST",
 		"/push/channelSubscriptions",
-		nil,
-		subInput,
-		nil)
+		ably.RequestWithBody(subInput))
+	item, err := req.Items(ctx)
 	if err != nil {
 		log.Debug("error subscribing to a channel", "err", err)
 		return err
 	}
-	if !resp.Success {
-		log.Debug("error subscribing to a channel", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
-		return errors.New(resp.ErrorMessage)
+	if item.Err() != nil {
+		log.Debug("error subscribing to a channel", "err", item.Err())
+		return item.Err()
 	}
 	return nil
 }
 
 func unsubscribePushDevice(ctx context.Context, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
-	resp, err := rest.Request(
-		ctx,
+	params := url.Values{}
+	params.Add("deviceId", deviceID)
+	params.Add("channel", channel)
+	req := rest.Request(
 		"DELETE",
-		"/push/channelSubscriptions/?deviceId="+deviceID+"&channel="+channel,
-		nil,
-		nil,
-		nil)
+		"/push/channelSubscriptions?"+params.Encode())
+	item, err := req.Items(ctx)
 	if err != nil {
 		log.Debug("error unsubscribing from a channel", "err", err)
 		return err
 	}
-	if !resp.Success {
-		log.Debug("error unsubscribing from a channel", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
-		return errors.New(resp.ErrorMessage)
+	if item.Err() != nil {
+		log.Debug("error unsubscribing from a channel", "err", item.Err())
+		return item.Err()
 	}
 	return nil
+}
+
+type pushLogMeta struct {
+	Error string `json:"error"`
+}
+
+type pushLogMessage struct {
+	Severity string      `json:"severity"`
+	Meta     pushLogMeta `json:"meta"`
+	Message  string      `json:"message"`
 }
 
 // runSubscriber runs a subscriber task which renders the channel names using
@@ -230,13 +235,18 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 				for {
 					l.log.Debug("subscribing to metachannel")
 					err := client.Subscribe(ctx, "[meta]log:push", func(message *ably.Message) {
-						data := message.Data.(map[string]interface{})
-						if severity, ok := data["severity"]; ok && severity == "error" {
-							if meta, ok := data["meta"].(map[string]interface{}); ok {
-								if errStr, ok := meta["error"].(string); ok {
-									l.w.boomer.RecordFailure("ablyboomer", "pushLog", 0, errStr)
-								}
-							}
+						data := message.Data.(string)
+						var msg pushLogMessage
+						if err := json.Unmarshal([]byte(data), &msg); err != nil {
+							l.log.Debug("error parsing message", "err", err)
+							l.w.boomer.RecordFailure("ablyboomer", "pushLog", 0, err.Error())
+							return
+						}
+						switch msg.Severity {
+						case "warn":
+							l.w.boomer.RecordFailure("ablyboomer", "pushLog", 0, msg.Message)
+						case "error":
+							l.w.boomer.RecordFailure("ablyboomer", "pushLog", 0, msg.Meta.Error)
 						}
 						l.log.Debug("push metachannel:", "message", data)
 					})
