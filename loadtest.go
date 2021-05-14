@@ -91,7 +91,14 @@ func (l *loadTest) runUser() {
 	l.log.Debug("user stopped")
 }
 
-func registerPushDevice(ctx context.Context, config *config.Config, deviceID, outputChannel string, rest *ably.REST, log log15.Logger) error {
+func registerPushDevice(
+	ctx context.Context,
+	config *config.Config,
+	deviceID string,
+	outputChannel string,
+	rest *ably.REST,
+	log log15.Logger,
+) error {
 	type recipient struct {
 		TransportType string `json:"transportType"`
 		Channel       string `json:"channel"`
@@ -138,7 +145,32 @@ func registerPushDevice(ctx context.Context, config *config.Config, deviceID, ou
 	return nil
 }
 
-func subscribePushDevice(ctx context.Context, config *config.Config, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
+func updatePushDevice(ctx context.Context, deviceID string, metadata map[string]string, rest *ably.REST, log log15.Logger) error {
+	type input struct {
+		Metadata map[string]string `json:"metadata"`
+	}
+	regInput := &input{
+		Metadata: metadata,
+	}
+	resp, err := rest.Request(
+		ctx,
+		"PATCH",
+		"/push/deviceRegistrations/"+deviceID,
+		nil,
+		regInput,
+		nil)
+	if err != nil {
+		log.Debug("error updating a push device", "err", err)
+		return err
+	}
+	if !resp.Success {
+		log.Debug("error updating a push device", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
+		return errors.New(resp.ErrorMessage)
+	}
+	return nil
+}
+
+func subscribePushDevice(ctx context.Context, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
 	type input struct {
 		Channel  string `json:"channel"`
 		DeviceId string `json:"deviceId"`
@@ -160,6 +192,25 @@ func subscribePushDevice(ctx context.Context, config *config.Config, deviceID, c
 	}
 	if !resp.Success {
 		log.Debug("error subscribing to a channel", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
+		return errors.New(resp.ErrorMessage)
+	}
+	return nil
+}
+
+func unsubscribePushDevice(ctx context.Context, deviceID, channel string, rest *ably.REST, log log15.Logger) error {
+	resp, err := rest.Request(
+		ctx,
+		"DELETE",
+		"/push/channelSubscriptions/?deviceId="+deviceID+"&channel="+channel,
+		nil,
+		nil,
+		nil)
+	if err != nil {
+		log.Debug("error unsubscribing from a channel", "err", err)
+		return err
+	}
+	if !resp.Success {
+		log.Debug("error unsubscribing from a channel", "statusCode", resp.StatusCode, "errorMessage", resp.ErrorMessage)
 		return errors.New(resp.ErrorMessage)
 	}
 	return nil
@@ -236,11 +287,44 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 			}
 		}
 
+		regUpdateInterval := func() time.Duration { return l.w.Conf().Subscriber.PushDevice.RegistrationUpdateInterval }
+		if regUpdateInterval() > 0 {
+			errG.Go(func() error {
+				// Wait a random amount of time so that all devices don't all
+				// update at the same time.
+				select {
+				case <-time.After(time.Duration(rand.Int63n(int64(regUpdateInterval())))):
+				case <-ctx.Done():
+					return nil
+				}
+				for {
+					startTime := timeNow()
+					l.log.Debug("updating push device", "deviceID", deviceID)
+					err := updatePushDevice(ctx, deviceID, map[string]string{
+						"randomString": randomString(8),
+					}, rest, l.log)
+					elapsedTime := timeNow() - startTime
+					if err == nil {
+						l.log.Debug("updated push device", "deviceID", deviceID, "elapsedTime", elapsedTime)
+						l.w.boomer.RecordSuccess("ablyboomer", "updatePushDevice", elapsedTime, 0)
+					} else {
+						l.log.Debug("error updating push device", "deviceID", deviceID, "elapsedTime", elapsedTime, "err", err)
+						l.w.boomer.RecordFailure("ablyboomer", "updatePushDevice", elapsedTime, err.Error())
+					}
+					select {
+					case <-time.After(regUpdateInterval()):
+					case <-ctx.Done():
+						return nil
+					}
+				}
+			})
+		}
+
 		for _, channel := range channels {
 			for {
 				startTime := timeNow()
 				l.log.Debug("subscribing push device", "deviceID", deviceID)
-				err := subscribePushDevice(ctx, l.w.Conf(), deviceID, channel, rest, l.log)
+				err := subscribePushDevice(ctx, deviceID, channel, rest, l.log)
 				elapsedTime := timeNow() - startTime
 				if err == nil {
 					l.log.Debug("subscribed push device", "deviceID", deviceID, "elapsedTime", elapsedTime)
@@ -256,6 +340,45 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 						return nil
 					}
 				}
+			}
+
+			subUpdateInterval := func() time.Duration { return l.w.Conf().Subscriber.PushDevice.SubscriptionUpdateInterval }
+			if subUpdateInterval() > 0 {
+				channel := channel
+				errG.Go(func() error {
+					// Wait a random amount of time so that all devices don't
+					// all update at the same time.
+					select {
+					case <-time.After(time.Duration(rand.Int63n(int64(subUpdateInterval())))):
+					case <-ctx.Done():
+						return nil
+					}
+					subscribed := true
+					for {
+						startTime := timeNow()
+						l.log.Debug("updating push device subscription", "deviceID", deviceID)
+						var err error
+						if subscribed {
+							err = unsubscribePushDevice(ctx, deviceID, channel, rest, l.log)
+						} else {
+							err = subscribePushDevice(ctx, deviceID, channel, rest, l.log)
+						}
+						elapsedTime := timeNow() - startTime
+						if err == nil {
+							subscribed = !subscribed
+							l.log.Debug("updated push device subscription", "deviceID", deviceID, "elapsedTime", elapsedTime)
+							l.w.boomer.RecordSuccess("ablyboomer", "updatePushDeviceSubscription", elapsedTime, 0)
+						} else {
+							l.log.Debug("error updating push device subscription", "deviceID", deviceID, "elapsedTime", elapsedTime, "err", err)
+							l.w.boomer.RecordFailure("ablyboomer", "updatePushDeviceSubscription", elapsedTime, err.Error())
+						}
+						select {
+						case <-time.After(subUpdateInterval()):
+						case <-ctx.Done():
+							return nil
+						}
+					}
+				})
 			}
 		}
 
