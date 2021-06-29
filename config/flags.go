@@ -189,6 +189,13 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Ably.RequestTimeout,
 			EnvVars:     []string{"ABLY_REQUEST_TIMEOUT"},
 		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:        "ably.channel-modes",
+			Usage:       "The Channel Modes to use (comma separated, set to empty to use the default modes) Valid modes are 'presence', 'publish', 'subscribe', and 'presenceSubscribe'",
+			Value:       c.Ably.ChannelModes,
+			Destination: &c.Ably.ChannelModes,
+			EnvVars:     []string{"ABLY_CHANNEL_MODES"},
+		}),
 		altsrc.NewPathFlag(&cli.PathFlag{
 			Name:        "perf.cpu-profile-dir",
 			Usage:       "The directory path to write the pprof cpu profile",
