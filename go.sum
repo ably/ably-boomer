@@ -2,12 +2,8 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUWq3EgK3CesDbo8upS2Vm9/P3FtgI+Jk=
 github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
-github.com/ably/ably-go v1.2.0-apipreview.4.0.20210513172055-70618e507728 h1:Twxf/E6gBZ1TDUc0frwAzmS6kqnaXXUEKr4zOTse8OE=
-github.com/ably/ably-go v1.2.0-apipreview.4.0.20210513172055-70618e507728/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
-github.com/ably/ably-go v1.2.0-apipreview.4.0.20210513173937-42f635f91571 h1:Ym7baY9NdAxVbPTu2ugcD1ClH7ofPUstrz/OtswMd6Y=
-github.com/ably/ably-go v1.2.0-apipreview.4.0.20210513173937-42f635f91571/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
-github.com/ably/ably-go v1.2.0-apipreview.4.0.20210514134729-e972f86e6a30 h1:/Y5jMj/2j30HaMBrP4j2hRKZyfACwxg331cco0APKkQ=
-github.com/ably/ably-go v1.2.0-apipreview.4.0.20210514134729-e972f86e6a30/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
+github.com/ably/ably-go v1.2.0 h1:USvHueS/BvJypCQ2xmGxobmZCxaNuTc1/TsCEZHuipc=
+github.com/ably/ably-go v1.2.0/go.mod h1:bdOnFcqJrbZE7WSp1jqbdsIMBo5aMGXh98GWiiwmeZ0=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 h1:LHEOGCi+2CooiWkQB2BlzdMVh6rdRDyt5Wflv4yzvXY=
 github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3/go.mod h1:JS7hed4L1fj0hXcyEejnW57/7LCetXggd+vwrRnYeII=
 github.com/aws/aws-sdk-go v1.33.17 h1:vngPRchZs603qLtJH7lh2pBCDqiFxA9+9nDWJ5WYJ5A=
