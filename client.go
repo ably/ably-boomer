@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/ably/ably-boomer/config"
@@ -102,22 +103,50 @@ func NewAblyClient(ctx context.Context, conf *config.Config, log log15.Logger) (
 	client.Connect()
 	select {
 	case err := <-firstErr:
-		return &ablyClient{client}, err
+		return newAblyClient(client, conf, log), err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
+}
+
+// newAblyClient returns a new Ably client.
+func newAblyClient(realtime *ably.Realtime, conf *config.Config, log log15.Logger) *ablyClient {
+	client := &ablyClient{realtime, nil}
+
+	var modes []ably.ChannelMode
+	for _, channelMode := range strings.Split(conf.Ably.ChannelModes, ",") {
+		channelMode = strings.TrimSpace(channelMode)
+		switch channelMode {
+		case "presence":
+			modes = append(modes, ably.ChannelModePresence)
+		case "publish":
+			modes = append(modes, ably.ChannelModePublish)
+		case "subscribe":
+			modes = append(modes, ably.ChannelModeSubscribe)
+		case "presenceSubscribe":
+			modes = append(modes, ably.ChannelModePresenceSubscribe)
+		default:
+			log.Debug("ignoring unknown channel mode", "mode", channelMode)
+		}
+	}
+	if len(modes) > 0 {
+		client.channelOptions = append(client.channelOptions, ably.ChannelWithModes(modes...))
+	}
+
+	return client
 }
 
 // ablyClient implements the Client interface using a wrapped ably.Realtime
 // client.
 type ablyClient struct {
 	*ably.Realtime
+	channelOptions []ably.ChannelOption
 }
 
 // Subscribe subscribes to the given Ably channel and calls the given handler
 // with the data of each message received.
 func (a *ablyClient) Subscribe(ctx context.Context, channelName string, handler func(*ably.Message)) error {
-	channel := a.Realtime.Channels.Get(channelName)
+	channel := a.Realtime.Channels.Get(channelName, a.channelOptions...)
 	unsub, err := channel.SubscribeAll(ctx, func(msg *ably.Message) {
 		handler(msg)
 	})
@@ -131,12 +160,12 @@ func (a *ablyClient) Subscribe(ctx context.Context, channelName string, handler 
 
 // Publish publishes the given message to the given Ably channel.
 func (a *ablyClient) Publish(ctx context.Context, channelName string, messages []*ably.Message) error {
-	return a.Realtime.Channels.Get(channelName).PublishMultiple(ctx, messages)
+	return a.Realtime.Channels.Get(channelName, a.channelOptions...).PublishMultiple(ctx, messages)
 }
 
 // Enter enters the given Ably channel using the given clientID.
 func (a *ablyClient) Enter(ctx context.Context, channelName, clientID string) error {
-	return a.Realtime.Channels.Get(channelName).Presence.EnterClient(ctx, clientID, "")
+	return a.Realtime.Channels.Get(channelName, a.channelOptions...).Presence.EnterClient(ctx, clientID, "")
 }
 
 // Close closes the underlying ably.Realtime client.

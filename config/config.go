@@ -41,6 +41,7 @@ func Default() *Config {
 
 	conf.Ably.ConnectionTimeout = 4 * time.Second
 	conf.Ably.RequestTimeout = 10 * time.Second
+	conf.Ably.ChannelModes = "" // Use default modes.
 
 	conf.Log.Level = log15.LvlInfo.String()
 
@@ -115,6 +116,7 @@ type AblyConfig struct {
 	Environment       string
 	ConnectionTimeout time.Duration
 	RequestTimeout    time.Duration
+	ChannelModes      string
 }
 
 func (a *AblyConfig) ClientOptions() []ably.ClientOption {
