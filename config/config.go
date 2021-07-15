@@ -74,9 +74,10 @@ const (
 )
 
 type SubscriberConfig struct {
-	Enabled    bool
-	Channels   string
-	PushDevice SubscriberPushDeviceConfig
+	Enabled           bool
+	Channels          string
+	ReconnectInterval time.Duration
+	PushDevice        SubscriberPushDeviceConfig
 }
 
 type SubscriberPushDeviceConfig struct {
