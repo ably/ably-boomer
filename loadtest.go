@@ -404,7 +404,14 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		errG.Go(func() error {
 			for {
 				l.log.Debug("subscribing", "channel", channel)
-				err := client.Subscribe(ctx, channel, func(message *ably.Message) {
+				start := timeNow()
+				reconnectInterval := l.w.Conf().Subscriber.ReconnectInterval
+				reconnectCtx := ctx
+				reconnectCancel := func() {}
+				if reconnectInterval > 0 {
+					reconnectCtx, reconnectCancel = context.WithTimeout(ctx, reconnectInterval)
+				}
+				err := client.Subscribe(reconnectCtx, channel, func(message *ably.Message) {
 					data := []byte(message.Data.(string))
 					var msg Message
 					if err := json.Unmarshal(data, &msg); err != nil {
@@ -419,10 +426,15 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 				})
 				if errors.Is(err, context.Canceled) {
 					l.log.Debug("subscriber stopped")
+					reconnectCancel()
 					return nil
+				} else if errors.Is(err, context.DeadlineExceeded) {
+					l.log.Debug("subscriber reconnecting")
+					l.w.boomer.RecordSuccess("ablyboomer", "reconnect", timeNow()-start, 0)
 				} else if err != nil {
 					l.log.Debug("error subscribing", "channel", channel, "err", err)
 					l.w.boomer.RecordFailure("ablyboomer", "subscribe", 0, err.Error())
+					reconnectCancel()
 					// try again in a second
 					select {
 					case <-time.After(time.Second):

@@ -41,6 +41,13 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Subscriber.Channels,
 			EnvVars:     []string{"SUBSCRIBER_CHANNELS"},
 		}),
+		altsrc.NewDurationFlag(&cli.DurationFlag{
+			Name:        "subscriber.reconnect-interval",
+			Usage:       "The interval after which the subscriber should reconnect (0 to disable)",
+			Value:       c.Subscriber.ReconnectInterval,
+			Destination: &c.Subscriber.ReconnectInterval,
+			EnvVars:     []string{"SUBSCRIBER_RECONNECT_INTERVAL"},
+		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        "subscriber.push-device.enabled",
 			Usage:       "Register and subscribe a push device",
