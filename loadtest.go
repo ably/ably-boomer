@@ -79,6 +79,9 @@ func (l *loadTest) runUser() {
 
 	// run the enabled tasks until the loadTest is stopped
 	errG, ctx := errgroup.WithContext(ctx)
+	if reconnectInterval := l.w.Conf().Subscriber.ReconnectInterval; reconnectInterval > 0 {
+		errG.Go(func() error { return l.cycleConnection(ctx, client, reconnectInterval) })
+	}
 	if l.w.Conf().Subscriber.Enabled {
 		errG.Go(func() error { return l.runSubscriber(ctx, client, userNum) })
 	}
@@ -90,6 +93,20 @@ func (l *loadTest) runUser() {
 	}
 	errG.Wait()
 	l.log.Debug("user stopped")
+}
+
+func (l *loadTest) cycleConnection(ctx context.Context, client Client, reconnectInterval time.Duration) error {
+	tkr := time.NewTicker(reconnectInterval)
+	defer tkr.Stop()
+	for {
+		select {
+		case <-tkr.C:
+			client.Close()
+			client.Connect()
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func registerPushDevice(
@@ -404,14 +421,7 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 		errG.Go(func() error {
 			for {
 				l.log.Debug("subscribing", "channel", channel)
-				start := timeNow()
-				reconnectInterval := l.w.Conf().Subscriber.ReconnectInterval
-				reconnectCtx := ctx
-				reconnectCancel := func() {}
-				if reconnectInterval > 0 {
-					reconnectCtx, reconnectCancel = context.WithTimeout(ctx, reconnectInterval)
-				}
-				err := client.Subscribe(reconnectCtx, channel, func(message *ably.Message) {
+				err := client.Subscribe(ctx, channel, func(message *ably.Message) {
 					data := []byte(message.Data.(string))
 					var msg Message
 					if err := json.Unmarshal(data, &msg); err != nil {
@@ -426,15 +436,10 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 				})
 				if errors.Is(err, context.Canceled) {
 					l.log.Debug("subscriber stopped")
-					reconnectCancel()
 					return nil
-				} else if errors.Is(err, context.DeadlineExceeded) {
-					l.log.Debug("subscriber reconnecting")
-					l.w.boomer.RecordSuccess("ablyboomer", "reconnect", timeNow()-start, 0)
 				} else if err != nil {
 					l.log.Debug("error subscribing", "channel", channel, "err", err)
 					l.w.boomer.RecordFailure("ablyboomer", "subscribe", 0, err.Error())
-					reconnectCancel()
 					// try again in a second
 					select {
 					case <-time.After(time.Second):
