@@ -29,9 +29,6 @@ type Client interface {
 	// Enter enters the given channel using the given clientID.
 	Enter(ctx context.Context, channel, clientID string) error
 
-	// Connect opens the connection
-	Connect()
-
 	// Close closes the client.
 	Close() error
 }
@@ -171,11 +168,6 @@ func (a *ablyClient) Enter(ctx context.Context, channelName, clientID string) er
 	return a.Realtime.Channels.Get(channelName, a.channelOptions...).Presence.EnterClient(ctx, clientID, "")
 }
 
-// Connect connects the underlying ably.Realtime client.
-func (a *ablyClient) Connect()  {
-	a.Realtime.Connect()
-}
-
 // Close closes the underlying ably.Realtime client.
 func (a *ablyClient) Close() error {
 	a.Realtime.Close()
@@ -236,9 +228,6 @@ func (a *ablySSEClient) Publish(ctx context.Context, channelName string, message
 func (a *ablySSEClient) Enter(ctx context.Context, channelName, clientID string) error {
 	return errors.New("Enter not implemented for SSE client")
 }
-
-// Connect is a noop
-func (a *ablySSEClient) Connect()  {}
 
 // Close stops any active subscriptions.
 func (a *ablySSEClient) Close() error {

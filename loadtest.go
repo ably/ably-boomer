@@ -67,46 +67,44 @@ func (l *loadTest) runUser() {
 		cancel()
 	}()
 
-	// initialise a client, reporting any errors that occur
-	l.log.Debug("initialising client")
-	client, err := l.newClientFunc(ctx, l.w.Conf(), l.log)
-	if err != nil {
-		l.log.Debug("error initialising client", "err", err)
-		l.w.boomer.RecordFailure("ablyboomer", "client", 0, err.Error())
-		return
-	}
-	defer client.Close()
-
-	// run the enabled tasks until the loadTest is stopped
-	errG, ctx := errgroup.WithContext(ctx)
-	if reconnectInterval := l.w.Conf().Subscriber.ReconnectInterval; reconnectInterval > 0 {
-		errG.Go(func() error { return l.cycleConnection(ctx, client, reconnectInterval) })
-	}
-	if l.w.Conf().Subscriber.Enabled {
-		errG.Go(func() error { return l.runSubscriber(ctx, client, userNum) })
-	}
-	if l.w.Conf().Publisher.Enabled {
-		errG.Go(func() error { return l.runPublisher(ctx, client, userNum) })
-	}
-	if l.w.Conf().Presence.Enabled {
-		errG.Go(func() error { return l.runPresence(ctx, client, userNum) })
-	}
-	errG.Wait()
-	l.log.Debug("user stopped")
-}
-
-func (l *loadTest) cycleConnection(ctx context.Context, client Client, reconnectInterval time.Duration) error {
-	tkr := time.NewTicker(reconnectInterval)
-	defer tkr.Stop()
 	for {
-		select {
-		case <-tkr.C:
-			client.Close()
-			client.Connect()
-		case <-ctx.Done():
-			return nil
+		if ctx.Err() != nil {
+			break
 		}
+
+		runCtx := ctx
+		runCancel := func() {}
+		if reconnectInterval := l.w.conf.Subscriber.ReconnectInterval; reconnectInterval > 0 {
+			runCtx, runCancel = context.WithTimeout(runCtx, reconnectInterval)
+		}
+
+		// initialise a client, reporting any errors that occur
+		l.log.Debug("initialising client")
+		client, err := l.newClientFunc(runCtx, l.w.Conf(), l.log)
+		if err != nil {
+			l.log.Debug("error initialising client", "err", err)
+			l.w.boomer.RecordFailure("ablyboomer", "client", 0, err.Error())
+			runCancel()
+			return
+		}
+
+		// run the enabled tasks until the loadTest is stopped
+		errG, ctx := errgroup.WithContext(runCtx)
+		if l.w.Conf().Subscriber.Enabled {
+			errG.Go(func() error { return l.runSubscriber(ctx, client, userNum) })
+		}
+		if l.w.Conf().Publisher.Enabled {
+			errG.Go(func() error { return l.runPublisher(ctx, client, userNum) })
+		}
+		if l.w.Conf().Presence.Enabled {
+			errG.Go(func() error { return l.runPresence(ctx, client, userNum) })
+		}
+		errG.Wait()
+		client.Close()
+		runCancel()
 	}
+
+	l.log.Debug("user stopped")
 }
 
 func registerPushDevice(
