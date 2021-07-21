@@ -59,50 +59,44 @@ func (l *loadTest) runUser() {
 	userNum := l.userCounter.Inc()
 	l.log.Debug("starting user", "number", userNum)
 
-	// initialise a context that cancels when the loadTest is stopped
-	ctx, cancel := context.WithCancel(context.Background())
+	// initialise a context for the lifetime of the loadtest
+	ctx := context.Background()
+	var cancel func()
+	if lifetime := l.w.conf.UserLifetime; lifetime > 0 {
+		ctx, cancel = context.WithTimeout(ctx, lifetime)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
+	defer cancel()
+
 	go func() {
 		<-l.stopC
 		l.log.Debug("stopping user")
 		cancel()
 	}()
 
-	for {
-		if ctx.Err() != nil {
-			break
-		}
-
-		runCtx := ctx
-		runCancel := func() {}
-		if reconnectInterval := l.w.conf.Subscriber.ReconnectInterval; reconnectInterval > 0 {
-			runCtx, runCancel = context.WithTimeout(runCtx, reconnectInterval)
-		}
-
-		// initialise a client, reporting any errors that occur
-		l.log.Debug("initialising client")
-		client, err := l.newClientFunc(runCtx, l.w.Conf(), l.log)
-		if err != nil {
-			l.log.Debug("error initialising client", "err", err)
-			l.w.boomer.RecordFailure("ablyboomer", "client", 0, err.Error())
-			runCancel()
-			return
-		}
-
-		// run the enabled tasks until the loadTest is stopped
-		errG, ctx := errgroup.WithContext(runCtx)
-		if l.w.Conf().Subscriber.Enabled {
-			errG.Go(func() error { return l.runSubscriber(ctx, client, userNum) })
-		}
-		if l.w.Conf().Publisher.Enabled {
-			errG.Go(func() error { return l.runPublisher(ctx, client, userNum) })
-		}
-		if l.w.Conf().Presence.Enabled {
-			errG.Go(func() error { return l.runPresence(ctx, client, userNum) })
-		}
-		errG.Wait()
-		client.Close()
-		runCancel()
+	// initialise a client, reporting any errors that occur
+	l.log.Debug("initialising client")
+	client, err := l.newClientFunc(ctx, l.w.Conf(), l.log)
+	if err != nil {
+		l.log.Debug("error initialising client", "err", err)
+		l.w.boomer.RecordFailure("ablyboomer", "client", 0, err.Error())
+		return
 	}
+	defer client.Close()
+
+	// run the enabled tasks until the loadTest is stopped
+	errG, ctx := errgroup.WithContext(ctx)
+	if l.w.Conf().Subscriber.Enabled {
+		errG.Go(func() error { return l.runSubscriber(ctx, client, userNum) })
+	}
+	if l.w.Conf().Publisher.Enabled {
+		errG.Go(func() error { return l.runPublisher(ctx, client, userNum) })
+	}
+	if l.w.Conf().Presence.Enabled {
+		errG.Go(func() error { return l.runPresence(ctx, client, userNum) })
+	}
+	errG.Wait()
 
 	l.log.Debug("user stopped")
 }

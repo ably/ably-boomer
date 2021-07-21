@@ -54,17 +54,18 @@ func Default() *Config {
 }
 
 type Config struct {
-	Client     string
-	Subscriber SubscriberConfig
-	Publisher  PublisherConfig
-	Presence   PresenceConfig
-	Standalone StandaloneConfig
-	Locust     LocustConfig
-	Ably       AblyConfig
-	Perf       perf.Conf
-	Log        LogConfig
-	Redis      RedisConf
-	Custom     interface{}
+	Client       string
+	UserLifetime time.Duration
+	Subscriber   SubscriberConfig
+	Publisher    PublisherConfig
+	Presence     PresenceConfig
+	Standalone   StandaloneConfig
+	Locust       LocustConfig
+	Ably         AblyConfig
+	Perf         perf.Conf
+	Log          LogConfig
+	Redis        RedisConf
+	Custom       interface{}
 }
 
 const (
@@ -76,7 +77,6 @@ const (
 type SubscriberConfig struct {
 	Enabled           bool
 	Channels          string
-	ReconnectInterval time.Duration
 	PushDevice        SubscriberPushDeviceConfig
 }
 
