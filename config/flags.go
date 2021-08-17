@@ -27,6 +27,13 @@ func (c *Config) Flags() []cli.Flag {
 			Destination: &c.Client,
 			EnvVars:     []string{"CLIENT"},
 		}),
+		altsrc.NewDurationFlag(&cli.DurationFlag{
+			Name:        "user-lifetime",
+			Usage:       "How long a user should run for before restarting",
+			Value:       c.UserLifetime,
+			Destination: &c.UserLifetime,
+			EnvVars:     []string{"USER_LIFETIME"},
+		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        "subscriber.enabled",
 			Usage:       "Run subscribers",
@@ -40,13 +47,6 @@ func (c *Config) Flags() []cli.Flag {
 			Value:       c.Subscriber.Channels,
 			Destination: &c.Subscriber.Channels,
 			EnvVars:     []string{"SUBSCRIBER_CHANNELS"},
-		}),
-		altsrc.NewDurationFlag(&cli.DurationFlag{
-			Name:        "subscriber.reconnect-interval",
-			Usage:       "The interval after which the subscriber should reconnect (0 to disable)",
-			Value:       c.Subscriber.ReconnectInterval,
-			Destination: &c.Subscriber.ReconnectInterval,
-			EnvVars:     []string{"SUBSCRIBER_RECONNECT_INTERVAL"},
 		}),
 		altsrc.NewBoolFlag(&cli.BoolFlag{
 			Name:        "subscriber.push-device.enabled",
