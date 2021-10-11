@@ -259,7 +259,7 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 						}
 						l.log.Debug("push metachannel:", "message", data)
 					})
-					if errors.Is(err, context.Canceled) {
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 						return nil
 					} else if err != nil {
 						l.log.Debug("error subscribing to push metachannel", "err", err)
@@ -426,7 +426,7 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 					l.log.Debug("subscriber received message", "channel", channel, "latency", latency, "size", size)
 					l.w.boomer.RecordSuccess("ablyboomer", "subscribe", latency, size)
 				})
-				if errors.Is(err, context.Canceled) {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					l.log.Debug("subscriber stopped")
 					return nil
 				} else if err != nil {
@@ -484,7 +484,7 @@ func (l *loadTest) runPublisher(ctx context.Context, client Client, userNum int6
 							Data:   data,
 							Extras: extras,
 						}})
-						if errors.Is(err, context.Canceled) {
+						if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 							l.log.Debug("publication canceled", "channel", channel)
 						} else if err != nil {
 							l.log.Debug("error publishing message", "channel", channel, "err", err)
@@ -525,7 +525,7 @@ func (l *loadTest) runPresence(ctx context.Context, client Client, userNum int64
 					<-ctx.Done()
 					l.log.Debug("entering done", "channel", channel)
 					return nil
-				} else if errors.Is(err, context.Canceled) {
+				} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					l.log.Debug("presence stopped", "channel", channel)
 					return nil
 				}
