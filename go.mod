@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/ably/ably-go v1.2.0
+	github.com/ably/ably-go v1.2.2-0.20211016060629-9b3bbe603675
 	github.com/asaskevich/EventBus v0.0.0-20200428142821-4fc0642a29f3 // indirect
 	github.com/aws/aws-sdk-go v1.33.17
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
