@@ -75,6 +75,14 @@ func (l *loadTest) runUser() {
 		cancel()
 	}()
 
+	// capture panics
+	defer func() {
+		if err := recover(); err != nil {
+			l.log.Debug("panic occurred", "err", err)
+			l.w.boomer.RecordFailure("ablyboomer", "panic", 0, fmt.Sprintf("panic occurred: %v", err))
+		}
+	}()
+
 	// initialise a client, reporting any errors that occur
 	l.log.Debug("initialising client")
 	client, err := l.newClientFunc(ctx, l.w.Conf(), l.log)
