@@ -16,7 +16,7 @@ require (
 	github.com/inconshreveable/log15 v0.0.0-20200109203555-b30bc20e4fd1
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
-	github.com/myzhan/boomer v0.0.0-20210122030331-a9eddc3e0219
+	github.com/myzhan/boomer v0.0.0-20210918034300-6d5b8bc914bb
 	github.com/olekukonko/tablewriter v0.0.4 // indirect
 	github.com/r3labs/sse v0.0.0-20200828202401-10175c338a0a
 	github.com/shirou/gopsutil v2.20.5+incompatible // indirect

@@ -61,8 +61,8 @@ github.com/mattn/go-isatty v0.0.12 h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHX
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/mattn/go-runewidth v0.0.7 h1:Ei8KR0497xHyKJPAv59M1dkC+rOZCMBJ+t3fZ+twI54=
 github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
-github.com/myzhan/boomer v0.0.0-20210122030331-a9eddc3e0219 h1:JRhXkB6ZKcexfxmKunvwj0T5r7AOGqrYpHrLNLJbER0=
-github.com/myzhan/boomer v0.0.0-20210122030331-a9eddc3e0219/go.mod h1:Ma68Td5C5EAc1M9XA7yjC/tXg9u5qviNujytnX099ZQ=
+github.com/myzhan/boomer v0.0.0-20210918034300-6d5b8bc914bb h1:jmMUYy/xtTWqmb5boUDBNbADJU7zN+TUUTkXf8jF/Ck=
+github.com/myzhan/boomer v0.0.0-20210918034300-6d5b8bc914bb/go.mod h1:Ma68Td5C5EAc1M9XA7yjC/tXg9u5qviNujytnX099ZQ=
 github.com/nxadm/tail v1.4.4 h1:DQuhQpB1tVlglWS2hLQ5OV6B5r8aGxSrPc5Qo6uTN78=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/olekukonko/tablewriter v0.0.4 h1:vHD/YYe1Wolo78koG299f7V/VAS08c6IpCLn+Ejf/w8=
