@@ -8,7 +8,7 @@ import (
 	"github.com/ably/ably-boomer/config"
 	"github.com/ably/ably-go/ably"
 	"github.com/inconshreveable/log15"
-	"github.com/myzhan/boomer"
+	"github.com/dunstall/boomer"
 )
 
 // TestWorkerStandalone tests running a standalone Worker with subscriber,
