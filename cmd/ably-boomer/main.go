@@ -18,6 +18,7 @@ func main() {
 	conf := config.Default()
 	flags := conf.Flags()
 	log := log15.New()
+  log.SetHandler(log15.LvlFilterHandler(log15.LvlError, log15.StdoutHandler))
 	app := &cli.App{
 		Name:   "ably-boomer",
 		Usage:  "Ably load generator for Locust, based on the boomer library",

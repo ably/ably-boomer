@@ -15,6 +15,8 @@ $(BIN)/%: | $(BIN)
 $(BIN)/golint: PACKAGE=golang.org/x/lint/golint
 
 image:
+	rm -rf boomer
+	cp -rf ../../external/boomer boomer
 	DOCKER_BUILDKIT=1 docker build -t $(DOCKER_IMAGE_REPO):$(DOCKER_IMAGE_TAG) .
 
 push:
