@@ -411,10 +411,15 @@ func (l *loadTest) runSubscriber(ctx context.Context, client Client, userNum int
 
 		// If we enable the push device we want the subscriber to subscribe to
 		// the channel the device will push to when receiving a notification.
-		channels = []string{outputChannel}
+		channels = []string{}
 	}
 
 	l.log.Debug("starting subscriber", "channels", channels)
+
+	if len(channels) == 0 {
+		<-ctx.Done()
+		return nil
+	}
 
 	for i := range channels {
 		channel := channels[i]
